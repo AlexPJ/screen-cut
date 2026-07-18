@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>ScreenCut</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Sprite de iconos (trazo, 24x24): se referencia con <use href="#i-…"> -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></symbol>
+      <symbol id="i-region" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4"/><path d="M15 3h4a2 2 0 0 1 2 2v4"/><path d="M9 21H5a2 2 0 0 1-2-2v-4"/><path d="M15 21h4a2 2 0 0 0 2-2v-4"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-display" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></symbol>
+      <symbol id="i-scroll-v" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M8 7l4-4 4 4"/><path d="M8 17l4 4 4-4"/></symbol>
+      <symbol id="i-scroll-h" viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M7 8l-4 4 4 4"/><path d="M17 8l4 4-4 4"/></symbol>
+      <symbol id="i-timer" viewBox="0 0 24 24"><line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="2" x2="12" y2="5"/><circle cx="12" cy="14" r="8"/><path d="M12 10.5V14l2.4 2.4"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+      <symbol id="i-cursor" viewBox="0 0 24 24"><path d="M4 3l7.5 17 2.4-6.6L20.5 11z"/></symbol>
+      <symbol id="i-pen" viewBox="0 0 24 24"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/><path d="M15 5l4 4"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><line x1="6" y1="18" x2="18" y2="6"/><path d="M9.5 6H18v8.5"/></symbol>
+      <symbol id="i-line" viewBox="0 0 24 24"><line x1="5" y1="19" x2="19" y2="5"/></symbol>
+      <symbol id="i-rect" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="1.5"/></symbol>
+      <symbol id="i-ellipse" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/></symbol>
+      <symbol id="i-highlight" viewBox="0 0 24 24"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4l8 8z"/></symbol>
+      <symbol id="i-eraser" viewBox="0 0 24 24"><path d="m7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></symbol>
+      <symbol id="i-text" viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></symbol>
+      <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></symbol>
+      <symbol id="i-fill-none" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="4 3"/></symbol>
+      <symbol id="i-fill-same" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-fill-other" viewBox="0 0 24 24"><path d="M4 12h16v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="currentColor" stroke="none"/><rect x="4" y="4" width="16" height="16" rx="2"/></symbol>
+      <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+      <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+      <symbol id="i-save" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+      <symbol id="i-ocr" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="15" y2="13"/><line x1="7" y1="17" x2="12" y2="17"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><polyline points="4 12.5 9.5 18 20 6.5"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
+      <symbol id="i-min" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+      <symbol id="i-max" viewBox="0 0 24 24"><rect x="5.5" y="5.5" width="13" height="13" rx="1.5"/></symbol>
+      <symbol id="i-restore" viewBox="0 0 24 24"><path d="M5 15V6a2 2 0 0 1 2-2h9"/><rect x="8" y="8" width="11" height="11" rx="1.5"/></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+    </defs>
+  </svg>
+
+  <div id="app">
+    <!-- Barra de título propia: sigue el tema (la nativa de Windows no puede) -->
+    <header class="titlebar" id="titlebar">
+      <div class="tb-brand">
+        <span class="tb-logo"><svg><use href="#i-scissors"/></svg></span>
+        <span class="tb-name">ScreenCut</span>
+      </div>
+      <div class="tb-win">
+        <button id="tb-min" class="tb-btn" title="Minimizar"><svg><use href="#i-min"/></svg></button>
+        <button id="tb-max" class="tb-btn" title="Maximizar">
+          <svg class="ic-max"><use href="#i-max"/></svg>
+          <svg class="ic-restore"><use href="#i-restore"/></svg>
+        </button>
+        <button id="tb-close" class="tb-btn tb-close" title="Cerrar"><svg><use href="#i-x"/></svg></button>
+      </div>
+    </header>
+
+    <header class="topbar">
+      <div class="actions">
+        <button id="btn-region" class="btn btn-primary" title="Atajo global: Ctrl+Shift+X">
+          <svg><use href="#i-region"/></svg><span>Región</span>
+        </button>
+        <button id="btn-full" class="btn" title="Capturar pantalla completa">
+          <svg><use href="#i-display"/></svg><span>Pantalla</span>
+        </button>
+        <button id="btn-scroll-v" class="btn" title="Captura con scroll vertical">
+          <svg><use href="#i-scroll-v"/></svg><span>Scroll vertical</span>
+        </button>
+        <button id="btn-scroll-h" class="btn" title="Captura con scroll horizontal">
+          <svg><use href="#i-scroll-h"/></svg><span>Scroll horizontal</span>
+        </button>
+        <span class="divider"></span>
+        <label class="timer-ctl" title="Retardo antes de capturar">
+          <svg><use href="#i-timer"/></svg>
+          <select id="timer-select">
+            <option value="0">Sin retardo</option>
+            <option value="3">3 s</option>
+            <option value="5">5 s</option>
+            <option value="10">10 s</option>
+          </select>
+        </label>
+        <span class="spacer"></span>
+        <button id="btn-settings" class="btn btn-icon" title="Ajustes y Acerca de">
+          <svg><use href="#i-settings"/></svg>
+        </button>
+        <button id="btn-theme" class="btn btn-icon" title="Cambiar tema">
+          <svg class="ic-sun"><use href="#i-sun"/></svg>
+          <svg class="ic-moon"><use href="#i-moon"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Barra de anotación (visible al haber captura) -->
+    <div id="anno-bar" class="anno-bar hidden">
+      <div class="tool-group" id="tools">
+        <button class="tool" data-tool="cursor" title="Seleccionar, mover y redimensionar"><svg><use href="#i-cursor"/></svg></button>
+        <button class="tool" data-tool="pen" title="Dibujo a mano"><svg><use href="#i-pen"/></svg></button>
+        <button class="tool" data-tool="arrow" title="Flecha"><svg><use href="#i-arrow"/></svg></button>
+        <button class="tool" data-tool="line" title="Línea"><svg><use href="#i-line"/></svg></button>
+        <button class="tool" data-tool="rect" title="Recuadro"><svg><use href="#i-rect"/></svg></button>
+        <button class="tool" data-tool="ellipse" title="Círculo/elipse"><svg><use href="#i-ellipse"/></svg></button>
+        <button class="tool" data-tool="highlight" title="Resaltado (marcatextos)"><svg><use href="#i-highlight"/></svg></button>
+        <button class="tool" data-tool="text" title="Texto"><svg><use href="#i-text"/></svg></button>
+        <button class="tool" data-tool="eraser" title="Borrador: borra anotaciones al pasar (Supr borra la selección)"><svg><use href="#i-eraser"/></svg></button>
+        <button class="tool" data-tool="crop" title="Recortar"><svg><use href="#i-crop"/></svg></button>
+      </div>
+
+      <span class="divider"></span>
+
+      <div class="tool-group swatches" id="swatches"></div>
+      <input type="color" id="color-custom" class="color-input" title="Color personalizado" value="#d97757" />
+
+      <span class="divider"></span>
+
+      <div class="tool-group" id="fill-group" title="Relleno">
+        <button class="opt" data-fill="none" title="Sin relleno"><svg><use href="#i-fill-none"/></svg></button>
+        <button class="opt" data-fill="stroke" title="Relleno del color del trazo"><svg><use href="#i-fill-same"/></svg></button>
+        <button class="opt" data-fill="other" title="Relleno de otro color"><svg><use href="#i-fill-other"/></svg></button>
+        <input type="color" id="fill-custom" class="color-input" title="Color de relleno" value="#ffe14d" />
+      </div>
+
+      <span class="divider"></span>
+
+      <label class="width-ctl" title="Grosor">
+        <input type="range" id="stroke-width" min="1" max="20" value="4" />
+      </label>
+
+      <span class="spacer"></span>
+
+      <div class="tool-group">
+        <button id="btn-undo" class="tool" title="Deshacer (Ctrl+Z)"><svg><use href="#i-undo"/></svg></button>
+        <button id="btn-redo" class="tool" title="Rehacer (Ctrl+Y)"><svg><use href="#i-redo"/></svg></button>
+        <button id="btn-clear" class="tool tool-danger" title="Borrar todas las anotaciones"><svg><use href="#i-trash"/></svg></button>
+      </div>
+    </div>
+
+    <main class="content">
+      <section class="preview-panel">
+        <div id="empty-state" class="empty-state">
+          <div class="empty-icon"><svg><use href="#i-scissors"/></svg></div>
+          <p>Haz una captura para empezar</p>
+          <p class="hint">Atajo global: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> para capturar una región</p>
+        </div>
+
+        <div id="editor-wrap" class="editor-wrap hidden">
+          <div id="editor" class="editor">
+            <canvas id="base-canvas"></canvas>
+            <canvas id="anno-canvas"></canvas>
+          </div>
+        </div>
+
+        <div id="crop-actions" class="crop-actions hidden">
+          <button id="crop-apply" class="btn btn-primary btn-small"><svg><use href="#i-check"/></svg><span>Recortar</span></button>
+          <button id="crop-cancel" class="btn btn-small"><svg><use href="#i-x"/></svg><span>Cancelar</span></button>
+        </div>
+
+        <div id="progress" class="progress hidden"></div>
+        <div id="countdown" class="countdown hidden"></div>
+      </section>
+
+      <aside id="ocr-panel" class="ocr-panel hidden">
+        <div class="ocr-header">
+          <span>Texto reconocido <span id="ocr-lang" class="ocr-lang"></span></span>
+          <button id="btn-copy-text" class="btn btn-small">Copiar texto</button>
+        </div>
+        <textarea id="ocr-text" spellcheck="false"></textarea>
+      </aside>
+    </main>
+
+    <footer id="capture-bar" class="capture-bar hidden">
+      <span id="capture-meta" class="meta"></span>
+      <span class="spacer"></span>
+      <button id="btn-ocr" class="btn"><svg><use href="#i-ocr"/></svg><span>OCR</span></button>
+      <button id="btn-copy" class="btn"><svg><use href="#i-copy"/></svg><span>Copiar</span></button>
+      <button id="btn-save" class="btn btn-primary"><svg><use href="#i-save"/></svg><span>Guardar</span></button>
+    </footer>
+
+    <!-- Modal de Ajustes + Acerca de -->
+    <div id="settings-overlay" class="modal-overlay hidden">
+      <div class="modal">
+        <header class="modal-head">
+          <h2>Ajustes</h2>
+          <button id="settings-close" class="btn btn-icon" title="Cerrar"><svg><use href="#i-x"/></svg></button>
+        </header>
+        <div class="modal-body">
+          <section class="set-group">
+            <h3>Atajos y captura</h3>
+            <label class="set-row">
+              <span class="set-label"><b>Usar Impr Pant (Print Screen)</b><small>Pulsa Impr Pant para capturar una región. Desactiva el mapeo de Windows a «Recortes» para que gane este atajo.</small></span>
+              <input type="checkbox" id="opt-prtsc" class="switch" />
+            </label>
+            <label class="set-row">
+              <span class="set-label"><b>Iniciar con Windows</b><small>Arranca ScreenCut en segundo plano al iniciar sesión, listo para el atajo.</small></span>
+              <input type="checkbox" id="opt-autostart" class="switch" />
+            </label>
+            <p class="set-note">Al cerrar la ventana, la app permanece en la bandeja del sistema para seguir respondiendo al atajo. Para salir del todo: clic derecho en el icono de la bandeja → <b>Salir</b>.</p>
+          </section>
+
+          <section class="set-group">
+            <h3>Acerca de</h3>
+            <div class="about">
+              <span class="about-logo"><svg><use href="#i-scissors"/></svg></span>
+              <div>
+                <div class="about-name">ScreenCut <span id="about-version" class="about-ver"></span></div>
+                <div class="about-desc">Capturas de pantalla ligeras con OCR (Tesseract), captura con scroll y anotaciones. Rust + Tauri.</div>
+              </div>
+            </div>
+            <div class="about-actions">
+              <button id="btn-update" class="btn"><svg><use href="#i-refresh"/></svg><span>Buscar actualizaciones</span></button>
+              <span id="update-status" class="update-status"></span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+  </div>
+  <script src="editor.js"></script>
+  <script src="settings.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Captura con scroll</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #1f1e1d; color: #faf9f5;
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 14px; font-size: 13px;
+      border: 1px solid #3a3937; border-radius: 12px;
+      user-select: none;
+    }
+    #status { flex: 1; color: #a29e93; white-space: nowrap; }
+    button {
+      background: #d97757; border: 0; color: #fff;
+      padding: 8px 16px; border-radius: 9px;
+      font-size: 13px; font-family: inherit; cursor: pointer;
+    }
+    button:hover { background: #e08b6d; }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #d97757; animation: pulse 1s infinite alternate;
+    }
+    @keyframes pulse { to { opacity: 0.3; } }
+  </style>
+</head>
+<body>
+  <div class="dot"></div>
+  <span id="status">Capturando…</span>
+  <button id="stop">■ Terminar</button>
+  <script>
+    const { invoke } = window.__TAURI__.core;
+    const { listen } = window.__TAURI__.event;
+    document.getElementById("stop").onclick = () => invoke("stop_scrolling");
+    listen("scroll-progress", (e) => {
+      document.getElementById("status").textContent =
+        `Capturando… ${e.payload.total_px}px`;
+    });
+  </script>
+</body>
+</html>

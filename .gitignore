@@ -1,0 +1,5 @@
+src-tauri/target/
+Cargo.lock
+
+# Clave privada de firma del updater — ¡NUNCA subir!
+src-tauri/*.key

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ScreenCut",
+  "version": "0.1.0",
+  "identifier": "com.alex.screencut",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "ScreenCut",
+        "width": 1040,
+        "height": 720,
+        "minWidth": 780,
+        "minHeight": 540,
+        "center": true,
+        "decorations": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/icon.ico"],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDMwQzYxQjU3NTM3QTU1MUIKUldRYlZYcFRWeHZHTU9xeEJ3VG5lUHNteTZOTWM3MzBzL2IzOXpuMnJES081eVBwUGJpQlkzQWcK",
+      "endpoints": [
+        "https://github.com/AlexPJ/screen-cut/releases/latest/download/latest.json"
+      ]
+    }
+  }
+}
