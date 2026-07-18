@@ -1,72 +1,114 @@
-# ScreenCut
+<div align="center">
 
-Herramienta de capturas de pantalla para Windows, súper ligera (Rust + Tauri 2, frontend estático sin Node). Hace lo mismo que "Recortes" de Windows, con OCR nativo y captura con scroll estilo Snagit.
+# ✂️ ScreenCut
 
-## Funciones
+### Capturas de pantalla ultraligeras para Windows — con OCR, captura con scroll y anotaciones
 
-- **Captura de región** — overlay a pantalla completa sobre el escritorio congelado, arrastra para seleccionar. Atajo global: `Ctrl+Shift+X`.
-- **Pantalla completa** — captura todo el escritorio virtual (multi-monitor).
-- **Captura con scroll** (vertical y horizontal) — selecciona la zona, la app envía eventos de rueda y cose los fotogramas detectando el desplazamiento por coincidencia de píxeles.
-- **OCR** — motor nativo de Windows (`Windows.Media.Ocr`): sin descargas, usa los idiomas instalados en el sistema.
-- **Anotaciones** — flechas, líneas, recuadros, elipses, texto, resaltado (marcatextos) y dibujo a mano; color (paleta + personalizado), relleno (sin relleno / del color del trazo / de otro color) y grosor. Herramienta de selección para **mover y redimensionar** (handles en las esquinas), **borrador** para eliminar trazos al pasar, `Supr` borra la selección, recorte (crop) y deshacer/rehacer (`Ctrl+Z` / `Ctrl+Y`). Copiar/guardar/OCR operan sobre el resultado aplanado.
-- **Temporizador** configurable (0 / 3 / 5 / 10 s; 3 s por defecto, preferencia recordada) con cuenta atrás antes de capturar.
-- **Copiar imagen** al portapapeles (CF_DIB), **guardar PNG**, copiar texto reconocido.
-- **Tema claro/oscuro** con preferencia recordada (localStorage). Barra de título propia que sigue el tema (la nativa de Windows no puede) e iconos SVG inline (sin fuentes ni frameworks: cero sobrecoste).
+[![Release](https://img.shields.io/github/v/release/AlexPJ/screen-cut?style=for-the-badge&color=d97757)](https://github.com/AlexPJ/screen-cut/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/AlexPJ/screen-cut/total?style=for-the-badge&color=d97757)](https://github.com/AlexPJ/screen-cut/releases)
+[![License](https://img.shields.io/github/license/AlexPJ/screen-cut?style=for-the-badge&color=d97757)](LICENSE)
+[![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white)](#)
+[![Rust + Tauri](https://img.shields.io/badge/Rust%20%2B%20Tauri-2-000?style=for-the-badge&logo=tauri&logoColor=white)](#)
 
-## Arquitectura (clean, modular)
+**[⬇️ Descargar la última versión](https://github.com/AlexPJ/screen-cut/releases/latest)**
+
+<img src="assets/hero.png" alt="ScreenCut en acción" width="820" />
+
+</div>
+
+---
+
+ScreenCut hace lo mismo que «Recortes» de Windows, pero **más rápido, más ligero y con superpoderes**: reconocimiento de texto (OCR) preciso, capturas con scroll que unen páginas enteras, y un editor de anotaciones completo. El ejecutable ronda los **2–3 MB** y consume **~25 MB de RAM**. Sin Electron, sin navegador empaquetado, sin dependencias pesadas.
+
+## ✨ Características
+
+- 🖼️ **Captura de región, ventana o pantalla completa** — overlay sobre el escritorio congelado; arrastra para seleccionar. Multi-monitor y con soporte de escalado (DPI).
+- 📜 **Captura con scroll (Snagit-style)** — vertical y horizontal. Recorre páginas o conversaciones largas y las cose en una sola imagen, detectando el desplazamiento píxel a píxel. Tú decides cuándo parar.
+- 🔤 **OCR preciso con Tesseract** — extrae el texto de cualquier captura, incluso terminales de fondo oscuro (preprocesado con inversión y contraste automáticos). Copia el texto con un clic.
+- 🎨 **Editor de anotaciones** — flechas, líneas, recuadros, elipses, texto, resaltado y dibujo a mano. Color y grosor a elegir, relleno (ninguno / color del trazo / otro color), mover y redimensionar, borrador, **deshacer/rehacer** y **recorte (crop)**.
+- ⏱️ **Temporizador** configurable (3 s por defecto) con cuenta atrás.
+- ⌨️ **Atajo global** — `Ctrl+Shift+X`, o convierte **Impr Pant (Print Screen)** en tu herramienta de captura por defecto.
+- 🔔 **Vive en la bandeja del sistema** — siempre lista, opción de iniciar con Windows.
+- 🌗 **Tema claro/oscuro** con la preferencia recordada.
+- 🔄 **Actualizaciones automáticas** firmadas, integradas en la app.
+- 💾 **Copia al portapapeles** o **guarda como PNG** el resultado (con anotaciones incluidas).
+
+## 📸 Capturas
+
+**OCR — reconoce hasta terminales de fondo oscuro, con rutas y símbolos intactos:**
+
+<img src="assets/ocr.png" alt="OCR con Tesseract" width="720" />
+
+**Ajustes y actualizaciones (tema oscuro):**
+
+<img src="assets/settings.png" alt="Ajustes y Acerca de" width="620" />
+
+## ⬇️ Descarga e instalación
+
+1. Ve a la **[página de releases](https://github.com/AlexPJ/screen-cut/releases/latest)**.
+2. Descarga `ScreenCut_x.y.z_x64-setup.exe`.
+3. Ejecútalo. Windows SmartScreen puede advertir por ser un editor desconocido: *Más información → Ejecutar de todas formas*.
+
+> Requisitos: Windows 10/11 (x64). WebView2 viene incluido en Windows 11 y en la mayoría de Windows 10 actualizados.
+
+Una vez instalada, la app se actualizará sola: **Ajustes → Acerca de → Buscar actualizaciones**.
+
+## 🚀 Uso rápido
+
+| Acción | Cómo |
+| --- | --- |
+| Capturar una región | Botón **Región** o `Ctrl+Shift+X` (o Impr Pant si lo activas) |
+| Pantalla completa | Botón **Pantalla** |
+| Captura con scroll | **Scroll vertical/horizontal** → selecciona la zona → **Terminar** cuando quieras |
+| Extraer texto (OCR) | Botón **OCR** |
+| Anotar | Barra de herramientas superior (flecha, recuadro, texto…) |
+| Recortar | Herramienta **crop** ⌏ |
+| Guardar / copiar | **Guardar** (PNG) o **Copiar** (portapapeles) |
+
+## 🛠️ Compilar desde el código
+
+Requisitos: [Rust](https://rustup.rs) (rustup), VS Build Tools con C++, y [Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) para el OCR.
+
+```powershell
+git clone https://github.com/AlexPJ/screen-cut.git
+cd screen-cut/src-tauri
+cargo build --release              # exe en target/release/screen-cut.exe
+# Instalador NSIS:
+cargo install tauri-cli --locked
+cargo tauri build
+```
+
+El perfil release está optimizado para tamaño y RAM (`opt-level="z"`, LTO, `strip`, `panic=abort`).
+
+### Arquitectura (clean, modular)
 
 ```
 src-tauri/src/
-  core/     Tipos de dominio (RawImage, CaptureInfo, OcrResult) — sin dependencias de plataforma
-  infra/    Adaptadores Windows: capture (GDI), ocr (WinRT), scroll (SendInput + stitching),
-            clipboard (Win32), png_io
+  core/     Tipos de dominio (RawImage, OcrResult…) — sin dependencias de plataforma
+  infra/    Adaptadores Windows: capture (GDI), ocr (Tesseract + preprocesado),
+            scroll (SendInput + stitching), clipboard (Win32), png_io
   app/      Estado y comandos Tauri (orquestación)
-ui/         Frontend estático: index.html (ventana principal), overlay.html (selección de región)
+ui/         Frontend estático (sin Node ni bundler): HTML/CSS/JS por capas
 ```
 
-## Compilar
+## 🔤 OCR
 
-Requisitos: Rust (rustup), VS Build Tools con C++, WebView2 (incluido en Windows 11).
+Usa **Tesseract** (motor LSTM) llamado como proceso externo, con preprocesado (grises, inversión automática en fondos oscuros, contraste, ampliación ×2). Si Tesseract no está, cae al motor nativo de Windows. Busca `tesseract.exe` junto al ejecutable, en el `PATH`, o en las rutas de instalación estándar. Para distribuir de forma autónoma, incluye la carpeta de Tesseract (con `tessdata`) junto al `.exe`.
 
-```powershell
-cd src-tauri
-cargo build --release   # exe standalone en target/release/screen-cut.exe
-```
+## 🔄 Publicar una nueva versión (mantenedores)
 
-Para generar el instalador NSIS: `cargo install tauri-cli --locked` y luego `cargo tauri build`.
+<details>
+<summary>Flujo de release + firma del updater</summary>
 
-El perfil release está optimizado para tamaño y RAM (`opt-level="z"`, LTO, strip).
-
-## OCR con Tesseract
-
-El OCR usa **Tesseract** (motor LSTM) llamado como proceso externo, con preprocesado de imagen (escala de grises, inversión automática en fondos oscuros, contraste y ampliación ×2). Si Tesseract no está disponible, cae al motor nativo de Windows.
-
-La app busca `tesseract.exe` en este orden: junto al ejecutable (`tesseract\tesseract.exe`), el `PATH`, `C:\Program Files\Tesseract-OCR`, y `%LOCALAPPDATA%\Programs\Tesseract-OCR`. Para **distribuir** la app de forma autónoma, copia la carpeta de Tesseract (con `tessdata`) junto al `.exe` o inclúyela como recurso del bundle. Idiomas: usa `eng` (+`spa` si añades `spa.traineddata` a `tessdata`).
-
-## Como app predeterminada (Impr Pant) y bandeja
-
-- En **Ajustes** puedes activar **«Usar Impr Pant»**: registra Print Screen como atajo global para capturar una región y desactiva el mapeo de Windows a «Recortes» para que gane este atajo.
-- **«Iniciar con Windows»** arranca la app en segundo plano al iniciar sesión.
-- Al **cerrar** la ventana, la app se oculta en la **bandeja del sistema** y sigue respondiendo al atajo. Para salir del todo: clic derecho en el icono de bandeja → **Salir**.
-
-## Publicar y actualizaciones automáticas
-
-La app integra el **updater de Tauri**: comprueba un `latest.json` remoto, descarga el instalador firmado y lo aplica (con reinicio). En **Ajustes → Acerca de → Buscar actualizaciones**.
-
-Configuración (ya hecha):
-- Par de claves de firma en `src-tauri/screencut.key` (privada, **NO subir**, ya en `.gitignore`) y `screencut.key.pub` (pública, embebida en `tauri.conf.json`).
-- `plugins.updater.endpoints` apunta a `https://github.com/OWNER/screen-cut/releases/latest/download/latest.json` — **reemplaza `OWNER`** por tu usuario/organización de GitHub.
-
-Para publicar una versión nueva:
-1. Sube el número en `src-tauri/tauri.conf.json` y `Cargo.toml` (p. ej. `0.2.0`).
-2. Compila firmando:
+1. Sube el número de versión en `src-tauri/tauri.conf.json` y `Cargo.toml`.
+2. Compila **firmando** (clave privada `src-tauri/screencut.key`, nunca subir al repo):
    ```powershell
    $env:TAURI_SIGNING_PRIVATE_KEY = Get-Content src-tauri\screencut.key -Raw
    $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
    cargo tauri build
    ```
-   Genera en `src-tauri/target/release/bundle/nsis/`: el instalador `*-setup.exe` y su firma `*-setup.exe.sig`.
-3. Crea un **Release de GitHub** con la etiqueta `v0.2.0` y sube el `*-setup.exe` y un `latest.json`:
+   Genera en `src-tauri/target/release/bundle/nsis/`: `*-setup.exe` y su firma `*-setup.exe.sig`.
+3. Crea un **Release de GitHub** (etiqueta `vX.Y.Z`) y sube el `*-setup.exe` y un `latest.json`:
    ```json
    {
      "version": "0.2.0",
@@ -74,12 +116,21 @@ Para publicar una versión nueva:
      "pub_date": "2026-01-01T00:00:00Z",
      "platforms": {
        "windows-x86_64": {
-         "signature": "<contenido de *-setup.exe.sig>",
-         "url": "https://github.com/OWNER/screen-cut/releases/download/v0.2.0/ScreenCut_0.2.0_x64-setup.exe"
+         "signature": "<contenido completo de *-setup.exe.sig>",
+         "url": "https://github.com/AlexPJ/screen-cut/releases/download/v0.2.0/ScreenCut_0.2.0_x64-setup.exe"
        }
      }
    }
    ```
-   El `signature` es el **texto completo** del archivo `.sig`. La `url` apunta al `*-setup.exe` de ese release.
 
-La app instalada comparará su versión con la del `latest.json` y ofrecerá actualizar. (El endpoint `.../releases/latest/download/latest.json` siempre resuelve al último release publicado.)
+La app instalada compara su versión con la de `latest.json` (`.../releases/latest/download/latest.json`) y ofrece actualizar.
+
+</details>
+
+## 📄 Licencia
+
+[MIT](LICENSE) © Alejandro Padilla
+
+<div align="center">
+<sub>Hecho con Rust + Tauri. Ligero por diseño.</sub>
+</div>
