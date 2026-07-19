@@ -43,6 +43,10 @@
       <symbol id="i-restore" viewBox="0 0 24 24"><path d="M5 15V6a2 2 0 0 1 2-2h9"/><rect x="8" y="8" width="11" height="11" rx="1.5"/></symbol>
       <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
       <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+      <symbol id="i-zoom-in" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></symbol>
+      <symbol id="i-zoom-out" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></symbol>
+      <symbol id="i-fit" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+      <symbol id="i-fill" viewBox="0 0 24 24"><path d="M19 11 9 1 7.6 2.4l2.1 2.1L3.8 10.4a2 2 0 0 0 0 2.8l5.5 5.5a2 2 0 0 0 2.8 0l6.9-6.9zM6 12l4.9-4.9L15.8 12z"/><path d="M20.5 15s1.5 1.8 1.5 3a1.5 1.5 0 0 1-3 0c0-1.2 1.5-3 1.5-3z" fill="currentColor" stroke="none"/></symbol>
     </defs>
   </svg>
 
@@ -120,15 +124,6 @@
 
       <span class="divider"></span>
 
-      <div class="tool-group" id="fill-group" title="Relleno">
-        <button class="opt" data-fill="none" title="Sin relleno"><svg><use href="#i-fill-none"/></svg></button>
-        <button class="opt" data-fill="stroke" title="Relleno del color del trazo"><svg><use href="#i-fill-same"/></svg></button>
-        <button class="opt" data-fill="other" title="Relleno de otro color"><svg><use href="#i-fill-other"/></svg></button>
-        <input type="color" id="fill-custom" class="color-input" title="Color de relleno" value="#ffe14d" />
-      </div>
-
-      <span class="divider"></span>
-
       <label class="width-ctl" title="Grosor">
         <input type="range" id="stroke-width" min="1" max="20" value="4" />
       </label>
@@ -177,11 +172,30 @@
 
     <footer id="capture-bar" class="capture-bar hidden">
       <span id="capture-meta" class="meta"></span>
+      <span class="divider"></span>
+      <div class="zoom-ctl">
+        <button id="zoom-out" class="zoom-btn" title="Alejar"><svg><use href="#i-zoom-out"/></svg></button>
+        <button id="zoom-level" class="zoom-level" title="Zoom actual (clic: ajustar)">100%</button>
+        <button id="zoom-in" class="zoom-btn" title="Acercar"><svg><use href="#i-zoom-in"/></svg></button>
+        <button id="zoom-fit" class="zoom-btn" title="Ajustar a la ventana"><svg><use href="#i-fit"/></svg></button>
+      </div>
       <span class="spacer"></span>
       <button id="btn-ocr" class="btn"><svg><use href="#i-ocr"/></svg><span>OCR</span></button>
       <button id="btn-copy" class="btn"><svg><use href="#i-copy"/></svg><span>Copiar</span></button>
       <button id="btn-save" class="btn btn-primary"><svg><use href="#i-save"/></svg><span>Guardar</span></button>
     </footer>
+
+    <!-- Popover de relleno (aparece bajo el icono de recuadro/elipse) -->
+    <div id="fill-popover" class="fill-popover hidden">
+      <div class="fill-arrow"></div>
+      <div class="fill-title">Relleno</div>
+      <div class="fill-opts">
+        <button class="opt" data-fill="none" title="Sin relleno"><svg><use href="#i-fill-none"/></svg></button>
+        <button class="opt" data-fill="stroke" title="Relleno del color del trazo"><svg><use href="#i-fill-same"/></svg></button>
+        <button class="opt" data-fill="other" title="Relleno de otro color"><svg><use href="#i-fill-other"/></svg></button>
+        <input type="color" id="fill-custom" class="color-input" title="Color de relleno" value="#ffe14d" />
+      </div>
+    </div>
 
     <!-- Modal de Ajustes + Acerca de -->
     <div id="settings-overlay" class="modal-overlay hidden">

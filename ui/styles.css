@@ -132,7 +132,7 @@ button svg { width: 16px; height: 16px; }
 .preview-panel {
   flex: 1; position: relative; display: flex;
   align-items: center; justify-content: center;
-  overflow: auto; padding: 20px;
+  overflow: hidden; padding: 20px;
 }
 .empty-state { text-align: center; color: var(--text-dim); }
 .empty-icon {
@@ -257,11 +257,11 @@ kbd {
 
 /* ---------- Editor (canvas por capas) ---------- */
 .editor-wrap {
-  max-width: 100%; max-height: 100%; overflow: auto;
-  display: flex; align-items: flex-start; justify-content: center;
+  width: 100%; height: 100%; overflow: auto;
+  display: flex; align-items: safe center; justify-content: safe center;
 }
 .editor {
-  position: relative; max-width: 100%;
+  position: relative; flex: none;
   box-shadow: var(--shadow-pop); border-radius: 8px; overflow: hidden;
   border: 1px solid var(--border);
 }
@@ -366,5 +366,49 @@ kbd {
 .update-status { font-size: 12px; color: var(--text-dim); }
 .update-status.ok { color: #46a758; }
 .update-status.err { color: var(--danger); }
+
+/* ---------- Controles de zoom (barra inferior) ---------- */
+.zoom-ctl { display: flex; align-items: center; gap: 2px; }
+.zoom-btn {
+  width: 30px; height: 30px; display: grid; place-items: center;
+  border: 1px solid transparent; background: transparent; color: var(--text-dim);
+  border-radius: 8px; cursor: pointer; transition: background 0.12s, color 0.12s;
+}
+.zoom-btn svg { width: 16px; height: 16px; }
+.zoom-btn:hover { background: var(--panel-2); color: var(--text); }
+.zoom-btn.active { background: var(--accent-soft); color: var(--accent); }
+.zoom-level {
+  min-width: 48px; height: 30px; padding: 0 6px;
+  border: 0; background: transparent; color: var(--text);
+  font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer;
+  border-radius: 8px;
+}
+.zoom-level:hover { background: var(--panel-2); }
+
+/* ---------- Popover de relleno (bocadillo con flechita) ---------- */
+.fill-popover {
+  position: fixed; z-index: 80;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: var(--shadow-pop);
+  padding: 10px 12px; animation: fade-in 0.12s ease;
+}
+.fill-arrow {
+  position: absolute; top: -7px; width: 12px; height: 12px;
+  background: var(--panel); border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border); transform: translateX(-50%) rotate(45deg);
+}
+.fill-title {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-dim); margin-bottom: 6px;
+}
+.fill-opts { display: flex; align-items: center; gap: 4px; }
+.fill-opts .opt {
+  width: 32px; height: 32px; display: grid; place-items: center;
+  border: 1px solid var(--border); background: var(--panel-2);
+  color: var(--text-dim); border-radius: 8px; cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.fill-opts .opt:hover { background: var(--panel-3); color: var(--text); }
+.fill-opts .opt.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 .hidden { display: none !important; }

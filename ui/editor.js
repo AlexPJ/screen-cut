@@ -41,13 +41,47 @@ const Editor = (() => {
     return baseCanvas.width > 0 && baseCanvas.height > 0;
   }
 
+  // ---------- zoom / ajuste a la ventana ----------
+  const panel = wrap.parentElement; // .preview-panel: mide el espacio disponible
+  let viewScale = 1;
+  let fitMode = true;
+  let viewCb = () => {};
+
+  function fitScale() {
+    if (!baseCanvas.width) return 1;
+    const cs = getComputedStyle(panel);
+    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const availW = panel.clientWidth - padX - 4;
+    const availH = panel.clientHeight - padY - 4;
+    return Math.max(0.05, Math.min(availW / baseCanvas.width, availH / baseCanvas.height, 1));
+  }
+  function effScale() { return fitMode ? fitScale() : viewScale; }
+  function applyView() {
+    if (!baseCanvas.width) return;
+    const s = effScale();
+    editor.style.width = Math.max(1, Math.round(baseCanvas.width * s)) + "px";
+    viewCb(Math.round(s * 100), fitMode);
+  }
+  function setZoomPct(pct) {
+    fitMode = false;
+    viewScale = Math.max(0.1, Math.min(8, pct / 100));
+    applyView();
+  }
+  function zoomIn() { setZoomPct(effScale() * 125); }
+  function zoomOut() { setZoomPct(effScale() * 80); }
+  function fitView() { fitMode = true; applyView(); }
+
+  // Reaplica el ajuste cuando cambia el espacio disponible (ventana, panel OCR…).
+  new ResizeObserver(() => { if (fitMode) applyView(); }).observe(panel);
+
   function setSize(w, h) {
     for (const c of [baseCanvas, annoCanvas]) {
       c.width = w;
       c.height = h;
     }
-    editor.style.width = w + "px";
     editor.style.aspectRatio = `${w} / ${h}`;
+    applyView();
   }
 
   function pointer(e) {
@@ -119,6 +153,7 @@ const Editor = (() => {
     else applySnap(e.shape, e.before);
     if (selected && !shapes.includes(selected)) selected = null;
     renderAnno();
+    notifyContext();
   }
   function redo() {
     if (hIndex >= history.length) return;
@@ -128,6 +163,7 @@ const Editor = (() => {
     else applySnap(e.shape, e.after);
     if (selected && !shapes.includes(selected)) selected = null;
     renderAnno();
+    notifyContext();
   }
   function clear() {
     if (!shapes.length) return;
@@ -135,6 +171,7 @@ const Editor = (() => {
     shapes = [];
     selected = null;
     renderAnno();
+    notifyContext();
   }
   function deleteSelected() {
     if (!selected) return;
@@ -145,6 +182,7 @@ const Editor = (() => {
     }
     selected = null;
     renderAnno();
+    notifyContext();
   }
 
   // ---------- render ----------
@@ -387,11 +425,13 @@ const Editor = (() => {
           moving = { shape: shapes[i], start: p, base: snapshot(shapes[i]), moved: false };
           dragging = true;
           renderAnno();
+          notifyContext();
           return;
         }
       }
       // vacío → deseleccionar
       if (selected) { selected = null; renderAnno(); }
+      notifyContext();
       return;
     }
 
@@ -556,6 +596,7 @@ const Editor = (() => {
       cropActions.classList.add("hidden");
       renderAnno();
       onChange();
+      notifyContext();
     };
     img.src = "data:image/png;base64," + pngBase64;
   }
@@ -577,12 +618,47 @@ const Editor = (() => {
   function getStyle() { return style; }
   function size() { return { w: baseCanvas.width, h: baseCanvas.height }; }
 
-  const TOOL_CURSORS = { cursor: "default", text: "text", eraser: "cell" };
+  // Cursor de borrador (SVG en línea): una goma en vez de la cruz.
+  const ERASER_CURSOR =
+    `url("data:image/svg+xml;utf8,` +
+    `<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28'>` +
+    `<g transform='rotate(-35 14 14)'>` +
+    `<rect x='6' y='10' width='16' height='9' rx='2' fill='white' stroke='%23222' stroke-width='1.6'/>` +
+    `<rect x='6' y='14.5' width='16' height='4.5' fill='%23d97757' stroke='%23222' stroke-width='1.6'/>` +
+    `</g></svg>") 6 21, auto`;
+  const TOOL_CURSORS = { cursor: "default", text: "text", eraser: ERASER_CURSOR };
   function setTool(t) {
     style.tool = t;
     selected = null;
     annoCanvas.style.cursor = TOOL_CURSORS[t] || "crosshair";
     renderAnno();
+    notifyContext();
+  }
+
+  // ---------- contexto (popover de relleno) ----------
+  let contextCb = () => {};
+  function currentContext() {
+    if (style.tool === "rect" || style.tool === "ellipse") {
+      return { showFill: true, anchor: style.tool, fillMode: style.fillMode, fillColor: style.fillColor };
+    }
+    if (style.tool === "cursor" && selected && (selected.type === "rect" || selected.type === "ellipse")) {
+      return {
+        showFill: true, anchor: selected.type,
+        fillMode: selected.fillMode || "none", fillColor: selected.fillColor || style.fillColor,
+      };
+    }
+    return { showFill: false };
+  }
+  function notifyContext() { contextCb(currentContext()); }
+  function applyFill(mode, color) {
+    style.fillMode = mode;
+    if (color) style.fillColor = color;
+    if (style.tool === "cursor" && selected && (selected.type === "rect" || selected.type === "ellipse")) {
+      selected.fillMode = mode;
+      if (color) selected.fillColor = color;
+      renderAnno();
+    }
+    notifyContext();
   }
 
   // eventos de puntero
@@ -595,7 +671,10 @@ const Editor = (() => {
   return {
     load, flattenedPng, basePng, undo, redo, clear, applyCrop, cancelCrop,
     setStyle, getStyle, hasImage, size, setTool, deleteSelected,
+    zoomIn, zoomOut, fitView, applyFill,
     onChange: (cb) => (changeCb = cb),
+    onView: (cb) => { viewCb = cb; applyView(); },
+    onContext: (cb) => { contextCb = cb; notifyContext(); },
     show: () => wrap.classList.remove("hidden"),
   };
 })();

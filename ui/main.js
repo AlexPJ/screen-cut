@@ -127,18 +127,66 @@ PALETTE.forEach((c) => {
 $("color-custom").oninput = (e) => { Editor.setStyle("color", e.target.value); swatches.querySelectorAll(".swatch").forEach((s) => s.classList.remove("active")); };
 setColor("#d97757");
 
-// Relleno
-const fillBtns = document.querySelectorAll("#fill-group .opt");
-function setFill(mode) {
-  Editor.setStyle("fillMode", mode);
-  fillBtns.forEach((b) => b.classList.toggle("active", b.dataset.fill === mode));
+// Relleno — popover contextual (solo para recuadro/elipse), tipo bocadillo
+const fillPopover = $("fill-popover");
+const fillArrow = fillPopover.querySelector(".fill-arrow");
+const fillOpts = fillPopover.querySelectorAll(".fill-opts .opt");
+let fillAnchorTool = null;
+
+function markFill(mode) {
+  fillOpts.forEach((b) => b.classList.toggle("active", b.dataset.fill === mode));
 }
-fillBtns.forEach((b) => (b.onclick = () => setFill(b.dataset.fill)));
-setFill("none");
-$("fill-custom").oninput = (e) => { Editor.setStyle("fillColor", e.target.value); setFill("other"); };
+fillOpts.forEach((b) => (b.onclick = () =>
+  Editor.applyFill(b.dataset.fill, b.dataset.fill === "other" ? $("fill-custom").value : undefined)));
+$("fill-custom").oninput = (e) => Editor.applyFill("other", e.target.value);
+
+function positionFillPopover() {
+  const btn = document.querySelector(`#tools .tool[data-tool="${fillAnchorTool}"]`);
+  if (!btn) return;
+  const r = btn.getBoundingClientRect();
+  fillPopover.style.visibility = "hidden";
+  fillPopover.classList.remove("hidden");
+  const pw = fillPopover.offsetWidth;
+  let left = r.left + r.width / 2 - pw / 2;
+  left = Math.max(8, Math.min(window.innerWidth - pw - 8, left));
+  fillPopover.style.left = left + "px";
+  fillPopover.style.top = r.bottom + 10 + "px";
+  fillArrow.style.left = r.left + r.width / 2 - left + "px";
+  fillPopover.style.visibility = "";
+}
+
+Editor.onContext((ctx) => {
+  if (ctx.showFill) {
+    fillAnchorTool = ctx.anchor;
+    markFill(ctx.fillMode);
+    $("fill-custom").value = ctx.fillColor || "#ffe14d";
+    positionFillPopover();
+    fillPopover.classList.remove("hidden");
+  } else {
+    fillAnchorTool = null;
+    fillPopover.classList.add("hidden");
+  }
+});
+window.addEventListener("resize", () => {
+  if (fillAnchorTool && !fillPopover.classList.contains("hidden")) positionFillPopover();
+});
 
 // Grosor
 $("stroke-width").oninput = (e) => Editor.setStyle("width", parseInt(e.target.value, 10));
+
+// ---------- Zoom / ajuste ----------
+$("zoom-out").onclick = () => Editor.zoomOut();
+$("zoom-in").onclick = () => Editor.zoomIn();
+$("zoom-fit").onclick = () => Editor.fitView();
+$("zoom-level").onclick = () => Editor.fitView();
+Editor.onView((pct, fit) => {
+  $("zoom-level").textContent = pct + "%";
+  $("zoom-fit").classList.toggle("active", fit);
+});
+Editor.onChange(() => {
+  const s = Editor.size();
+  if (s.w) $("capture-meta").textContent = `${s.w} × ${s.h} px`;
+});
 
 // Deshacer/rehacer/limpiar
 $("btn-undo").onclick = () => Editor.undo();
