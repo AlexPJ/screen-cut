@@ -32,9 +32,11 @@ const Editor = (() => {
     tool: "arrow",
     color: "#d97757",
     fillMode: "none", // none | stroke | other
-    fillColor: "#ffe14d",
+    fillColor: "#d97757",
     width: 4,
   };
+  // Mientras sea false, el color de relleno sigue al color del trazo.
+  let fillColorTouched = false;
 
   // ---------- utilidades ----------
   function hasImage() {
@@ -614,18 +616,29 @@ const Editor = (() => {
   }
 
   function onChange() { changeCb(); }
-  function setStyle(k, v) { style[k] = v; }
+  function setStyle(k, v) {
+    style[k] = v;
+    // El relleno sigue al trazo hasta que el usuario elija un color de relleno.
+    if (k === "color" && !fillColorTouched) {
+      style.fillColor = v;
+      notifyContext();
+    }
+  }
   function getStyle() { return style; }
   function size() { return { w: baseCanvas.width, h: baseCanvas.height }; }
 
-  // Cursor de borrador (SVG en línea): una goma en vez de la cruz.
+  // Cursor de borrador: mismo trazado que el icono de la barra, con halo blanco
+  // para que se vea sobre cualquier fondo. Punto activo en la punta inferior.
+  const ERASER_PATHS =
+    `<path d='m7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21'/>` +
+    `<path d='M22 21H7'/><path d='m5 11 9 9'/>`;
   const ERASER_CURSOR =
     `url("data:image/svg+xml;utf8,` +
-    `<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28'>` +
-    `<g transform='rotate(-35 14 14)'>` +
-    `<rect x='6' y='10' width='16' height='9' rx='2' fill='white' stroke='%23222' stroke-width='1.6'/>` +
-    `<rect x='6' y='14.5' width='16' height='4.5' fill='%23d97757' stroke='%23222' stroke-width='1.6'/>` +
-    `</g></svg>") 6 21, auto`;
+    `<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' ` +
+    `fill='none' stroke-linecap='round' stroke-linejoin='round'>` +
+    `<g stroke='white' stroke-width='3.4'>${ERASER_PATHS}</g>` +
+    `<g stroke='%23222' stroke-width='1.7'>${ERASER_PATHS}</g>` +
+    `</svg>") 5 27, auto`;
   const TOOL_CURSORS = { cursor: "default", text: "text", eraser: ERASER_CURSOR };
   function setTool(t) {
     style.tool = t;
@@ -650,14 +663,31 @@ const Editor = (() => {
     return { showFill: false };
   }
   function notifyContext() { contextCb(currentContext()); }
-  function applyFill(mode, color) {
+
+  function selectedFillable() {
+    return style.tool === "cursor" && selected && (selected.type === "rect" || selected.type === "ellipse")
+      ? selected : null;
+  }
+
+  // Cambia el modo de relleno (ninguno / color del trazo / otro color).
+  function applyFill(mode) {
     style.fillMode = mode;
-    if (color) style.fillColor = color;
-    if (style.tool === "cursor" && selected && (selected.type === "rect" || selected.type === "ellipse")) {
-      selected.fillMode = mode;
-      if (color) selected.fillColor = color;
+    const s = selectedFillable();
+    if (s) {
+      s.fillMode = mode;
+      if (mode === "other") s.fillColor = style.fillColor;
       renderAnno();
     }
+    notifyContext();
+  }
+
+  // El usuario elige un color de relleno explícito → deja de seguir al trazo.
+  function setFillColor(color) {
+    fillColorTouched = true;
+    style.fillColor = color;
+    style.fillMode = "other";
+    const s = selectedFillable();
+    if (s) { s.fillColor = color; s.fillMode = "other"; renderAnno(); }
     notifyContext();
   }
 
@@ -671,7 +701,7 @@ const Editor = (() => {
   return {
     load, flattenedPng, basePng, undo, redo, clear, applyCrop, cancelCrop,
     setStyle, getStyle, hasImage, size, setTool, deleteSelected,
-    zoomIn, zoomOut, fitView, applyFill,
+    zoomIn, zoomOut, fitView, applyFill, setFillColor,
     onChange: (cb) => (changeCb = cb),
     onView: (cb) => { viewCb = cb; applyView(); },
     onContext: (cb) => { contextCb = cb; notifyContext(); },

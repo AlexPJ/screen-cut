@@ -136,9 +136,8 @@ let fillAnchorTool = null;
 function markFill(mode) {
   fillOpts.forEach((b) => b.classList.toggle("active", b.dataset.fill === mode));
 }
-fillOpts.forEach((b) => (b.onclick = () =>
-  Editor.applyFill(b.dataset.fill, b.dataset.fill === "other" ? $("fill-custom").value : undefined)));
-$("fill-custom").oninput = (e) => Editor.applyFill("other", e.target.value);
+fillOpts.forEach((b) => (b.onclick = () => Editor.applyFill(b.dataset.fill)));
+$("fill-custom").oninput = (e) => Editor.setFillColor(e.target.value);
 
 function positionFillPopover() {
   const btn = document.querySelector(`#tools .tool[data-tool="${fillAnchorTool}"]`);
