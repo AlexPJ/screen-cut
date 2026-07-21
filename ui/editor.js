@@ -627,18 +627,18 @@ const Editor = (() => {
   function getStyle() { return style; }
   function size() { return { w: baseCanvas.width, h: baseCanvas.height }; }
 
-  // Cursor de borrador: mismo trazado que el icono de la barra, con halo blanco
-  // para que se vea sobre cualquier fondo. Punto activo en la punta inferior.
-  const ERASER_PATHS =
-    `<path d='m7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21'/>` +
-    `<path d='M22 21H7'/><path d='m5 11 9 9'/>`;
+  // Cursor de borrador: diseño plano de dos tonos (nada de 3D) con las
+  // esquinas redondeadas. La división va en el lado angosto (la goma blanca
+  // es un tercio, la funda naranja el resto). Contorno oscuro para que se
+  // vea sobre cualquier fondo. Punto activo en la esquina inferior: la que
+  // "roza" al borrar.
   const ERASER_CURSOR =
     `url("data:image/svg+xml;utf8,` +
-    `<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' ` +
-    `fill='none' stroke-linecap='round' stroke-linejoin='round'>` +
-    `<g stroke='white' stroke-width='3.4'>${ERASER_PATHS}</g>` +
-    `<g stroke='%23222' stroke-width='1.7'>${ERASER_PATHS}</g>` +
-    `</svg>") 5 27, auto`;
+    `<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24'>` +
+    `<g transform='rotate(-45 12 12)' stroke='%232b2b2b' stroke-width='1.1' stroke-linejoin='round'>` +
+    `<path d='M9.5 7h7a3.5 3.5 0 0 1 3.5 3.5v3a3.5 3.5 0 0 1-3.5 3.5H9.5z' fill='%23d97757'/>` +
+    `<path d='M9.5 7H7.5A3.5 3.5 0 0 0 4 10.5v3A3.5 3.5 0 0 0 7.5 17H9.5z' fill='%23f5f5f5'/>` +
+    `</g></svg>") 12 25, auto`;
   const TOOL_CURSORS = { cursor: "default", text: "text", eraser: ERASER_CURSOR };
   function setTool(t) {
     style.tool = t;
