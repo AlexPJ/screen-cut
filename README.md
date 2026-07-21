@@ -2,7 +2,7 @@
 
 # ✂️ ScreenCut
 
-### Capturas de pantalla ultraligeras para Windows — con OCR, captura con scroll y anotaciones
+### A tiny, fast screenshot tool for Windows — with OCR, scrolling capture and annotations
 
 [![Release](https://img.shields.io/github/v/release/AlexPJ/screen-cut?style=for-the-badge&color=d97757)](https://github.com/AlexPJ/screen-cut/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/AlexPJ/screen-cut/total?style=for-the-badge&color=d97757)](https://github.com/AlexPJ/screen-cut/releases)
@@ -10,127 +10,171 @@
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white)](#)
 [![Rust + Tauri](https://img.shields.io/badge/Rust%20%2B%20Tauri-2-000?style=for-the-badge&logo=tauri&logoColor=white)](#)
 
-**[⬇️ Descargar la última versión](https://github.com/AlexPJ/screen-cut/releases/latest)**
+**[⬇️ Download the latest version](https://github.com/AlexPJ/screen-cut/releases/latest)**
 
-<img src="assets/hero.png" alt="ScreenCut en acción" width="820" />
+<img src="assets/hero.png" alt="ScreenCut in action" width="820" />
 
 </div>
 
 ---
 
-ScreenCut hace lo mismo que «Recortes» de Windows, pero **más rápido, más ligero y con superpoderes**: reconocimiento de texto (OCR) preciso, capturas con scroll que unen páginas enteras, y un editor de anotaciones completo. El ejecutable ronda los **2–3 MB** y consume **~25 MB de RAM**. Sin Electron, sin navegador empaquetado, sin dependencias pesadas.
+ScreenCut does what the Windows Snipping Tool does, but **faster and with superpowers**: accurate text recognition (OCR), scrolling captures that stitch whole pages into one image, and a full annotation editor. The installer is **1.7 MB** — roughly **50× smaller** than a comparable Electron app — because it uses the WebView2 runtime Windows already ships instead of bundling a whole browser.
 
-## ✨ Características
+## ✨ Features
 
-- 🖼️ **Captura de región, ventana o pantalla completa** — overlay sobre el escritorio congelado; arrastra para seleccionar. Multi-monitor y con soporte de escalado (DPI).
-- 📜 **Captura con scroll (Snagit-style)** — vertical y horizontal. Recorre páginas o conversaciones largas y las cose en una sola imagen, detectando el desplazamiento píxel a píxel. Tú decides cuándo parar.
-- 🔤 **OCR preciso con Tesseract** — extrae el texto de cualquier captura, incluso terminales de fondo oscuro (preprocesado con inversión y contraste automáticos). Copia el texto con un clic.
-- 🎨 **Editor de anotaciones** — flechas, líneas, recuadros, elipses, texto, resaltado y dibujo a mano. Color y grosor a elegir, relleno (ninguno / color del trazo / otro color), mover y redimensionar, borrador, **deshacer/rehacer** y **recorte (crop)**.
-- ⏱️ **Temporizador** configurable (3 s por defecto) con cuenta atrás.
-- ⌨️ **Atajo global** — `Ctrl+Shift+X`, o convierte **Impr Pant (Print Screen)** en tu herramienta de captura por defecto.
-- 🔔 **Vive en la bandeja del sistema** — siempre lista, opción de iniciar con Windows.
-- 🌗 **Tema claro/oscuro** con la preferencia recordada.
-- 🔄 **Actualizaciones automáticas** firmadas, integradas en la app.
-- 💾 **Copia al portapapeles** o **guarda como PNG** el resultado (con anotaciones incluidas).
+- 🖼️ **Region, window or full-screen capture** — an overlay freezes the desktop, then you drag to select. Multi-monitor and DPI-scaling aware.
+- 📜 **Scrolling capture (Snagit-style)** — vertical and horizontal. Walks through long pages or conversations and stitches them into a single image, detecting the offset pixel by pixel. You decide when to stop.
+- 🔤 **Accurate OCR with Tesseract** — pulls text out of any capture, including dark-background terminals (automatic inversion and contrast pre-processing). Copy the text with one click.
+- 🎨 **Annotation editor** — arrows, lines, rectangles, ellipses, text, highlighter and freehand drawing. Pick colour and thickness, fill (none / stroke colour / custom colour), move and resize, eraser, **undo/redo** and **cropping**.
+- 🔍 **Zoom and fit** — the image fits the window by default; zoom in/out from the bottom bar.
+- ⏱️ **Configurable timer** (3 s by default) with an on-screen countdown.
+- ⌨️ **Global shortcut** — `Ctrl+Shift+X`, or turn **Print Screen** into your default capture key.
+- 🔔 **Lives in the system tray** — always ready, with an optional start-with-Windows setting.
+- 🌗 **Light/dark theme**, remembered between sessions.
+- 🔄 **Signed automatic updates** built into the app.
+- 💾 **Copy to clipboard** or **save as PNG**, annotations included.
 
-## 📸 Capturas
+## 📸 Screenshots
 
-**OCR — reconoce hasta terminales de fondo oscuro, con rutas y símbolos intactos:**
+**OCR — reads even dark terminals, with paths and symbols intact:**
 
-<img src="assets/ocr.png" alt="OCR con Tesseract" width="720" />
+<img src="assets/ocr.png" alt="OCR with Tesseract" width="720" />
 
-**Ajustes y actualizaciones (tema oscuro):**
+**Settings and updates (dark theme):**
 
-<img src="assets/settings.png" alt="Ajustes y Acerca de" width="620" />
+<img src="assets/settings.png" alt="Settings and About" width="620" />
 
-## ⬇️ Descarga e instalación
+## 📊 Benchmarks
 
-1. Ve a la **[página de releases](https://github.com/AlexPJ/screen-cut/releases/latest)**.
-2. Descarga `ScreenCut_x.y.z_x64-setup.exe`.
-3. Ejecútalo. Windows SmartScreen puede advertir por ser un editor desconocido: *Más información → Ejecutar de todas formas*.
+Measured on an Intel Core i7-10750H (6C/12T), 16 GB RAM, Windows 11 Pro 26200, across a 3840×1080 virtual desktop. Median of 5 runs.
 
-> Requisitos: Windows 10/11 (x64). WebView2 viene incluido en Windows 11 y en la mayoría de Windows 10 actualizados.
+### Size
 
-Una vez instalada, la app se actualizará sola: **Ajustes → Acerca de → Buscar actualizaciones**.
-
-## 🚀 Uso rápido
-
-| Acción | Cómo |
+| Artifact | Size |
 | --- | --- |
-| Capturar una región | Botón **Región** o `Ctrl+Shift+X` (o Impr Pant si lo activas) |
-| Pantalla completa | Botón **Pantalla** |
-| Captura con scroll | **Scroll vertical/horizontal** → selecciona la zona → **Terminar** cuando quieras |
-| Extraer texto (OCR) | Botón **OCR** |
-| Anotar | Barra de herramientas superior (flecha, recuadro, texto…) |
-| Recortar | Herramienta **crop** ⌏ |
-| Guardar / copiar | **Guardar** (PNG) o **Copiar** (portapapeles) |
+| **Installer** (NSIS `-setup.exe`) | **1.73 MB** |
+| Standalone executable | 4.42 MB |
+| Bundled frontend (HTML/CSS/JS) | 73 KB |
 
-## 🛠️ Compilar desde el código
+No Node, no bundler, no packaged browser — the UI is plain static files embedded in the binary.
 
-Requisitos: [Rust](https://rustup.rs) (rustup), VS Build Tools con C++, y [Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) para el OCR.
+### Speed
+
+| Operation | Time |
+| --- | --- |
+| Cold start (first launch) | ~375 ms |
+| Warm start (window on screen) | **~49 ms** |
+| Full-screen capture, 3840×1080, end to end | ~630 ms *(400 ms of which is the deliberate window-hide delay; the capture and PNG encode take ~230 ms)* |
+| OCR on a 760×300 terminal capture | ~355 ms |
+| OCR on a 3840×1080 capture | ~1.6 s |
+| Flatten + copy 3840×1080 to clipboard | ~139 ms |
+
+### Memory
+
+The app runs as one native process plus the WebView2 processes Windows spawns for the UI (7 in total). Working-set figures count shared Chromium pages that the OS shares with every other WebView2 app, so **private memory** is the honest number:
+
+| State | Private | Working set |
+| --- | --- | --- |
+| Idle | ~152 MB | ~347 MB |
+| With a 3840×1080 capture loaded | ~239 MB | ~485 MB |
+| *Native Rust process alone (idle)* | *~6 MB* | *~28 MB* |
+
+The Rust side is tiny; the footprint is essentially the WebView2 runtime, which is shared with every other WebView2 app on the system. The big win over Electron is the **download size** and the fact that no browser is bundled or updated separately — not a lower RAM ceiling, since the UI still runs on Chromium.
+
+## ⬇️ Download and install
+
+1. Go to the **[releases page](https://github.com/AlexPJ/screen-cut/releases/latest)**.
+2. Download `ScreenCut_x.y.z_x64-setup.exe`.
+3. Run it. Windows SmartScreen may warn about an unknown publisher: *More info → Run anyway*.
+
+> Requirements: Windows 10/11 (x64). WebView2 ships with Windows 11 and with most up-to-date Windows 10 installs.
+
+Once installed, the app updates itself: **Settings → About → Check for updates**.
+
+## 🚀 Quick start
+
+| Action | How |
+| --- | --- |
+| Capture a region | **Region** button or `Ctrl+Shift+X` (or Print Screen, if enabled) |
+| Full screen | **Screen** button |
+| Scrolling capture | **Vertical/Horizontal scroll** → select the area → **Finish** when you're done |
+| Extract text (OCR) | **OCR** button |
+| Annotate | Top toolbar (arrow, rectangle, text…) |
+| Crop | The **crop** ⌏ tool |
+| Save / copy | **Save** (PNG) or **Copy** (clipboard) |
+
+## ⌨️ Make it your default screenshot tool
+
+- In **Settings**, enable **"Use Print Screen"**: it registers Print Screen as a global shortcut for region capture and turns off the Windows mapping to the Snipping Tool so this shortcut wins.
+- **"Start with Windows"** launches the app in the background at sign-in.
+- **Closing** the window hides it in the **system tray**, so the shortcut keeps working. To quit completely: right-click the tray icon → **Quit**.
+
+## 🛠️ Build from source
+
+Requirements: [Rust](https://rustup.rs) (rustup), VS Build Tools with C++, and [Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) for OCR.
 
 ```powershell
 git clone https://github.com/AlexPJ/screen-cut.git
 cd screen-cut/src-tauri
-cargo build --release              # exe en target/release/screen-cut.exe
-# Instalador NSIS:
+cargo build --release              # exe at target/release/screen-cut.exe
+# NSIS installer:
 cargo install tauri-cli --locked
 cargo tauri build
 ```
 
-El perfil release está optimizado para tamaño y RAM (`opt-level="z"`, LTO, `strip`, `panic=abort`).
+The release profile is tuned for size and memory (`opt-level="z"`, LTO, `strip`, `panic=abort`).
 
-### Arquitectura (clean, modular)
+### Architecture (clean, modular)
 
 ```
 src-tauri/src/
-  core/     Tipos de dominio (RawImage, OcrResult…) — sin dependencias de plataforma
-  infra/    Adaptadores Windows: capture (GDI), ocr (Tesseract + preprocesado),
+  core/     Domain types (RawImage, OcrResult…) — no platform dependencies
+  infra/    Windows adapters: capture (GDI), ocr (Tesseract + pre-processing),
             scroll (SendInput + stitching), clipboard (Win32), png_io
-  app/      Estado y comandos Tauri (orquestación)
-ui/         Frontend estático (sin Node ni bundler): HTML/CSS/JS por capas
+  app/      State and Tauri commands (orchestration)
+ui/         Static frontend (no Node, no bundler): layered HTML/CSS/JS
 ```
 
 ## 🔤 OCR
 
-Usa **Tesseract** (motor LSTM) llamado como proceso externo, con preprocesado (grises, inversión automática en fondos oscuros, contraste, ampliación ×2). Si Tesseract no está, cae al motor nativo de Windows. Busca `tesseract.exe` junto al ejecutable, en el `PATH`, o en las rutas de instalación estándar. Para distribuir de forma autónoma, incluye la carpeta de Tesseract (con `tessdata`) junto al `.exe`.
+Uses **Tesseract** (LSTM engine) invoked as an external process, with image pre-processing (greyscale, automatic inversion on dark backgrounds, contrast stretch, 2× upscale). If Tesseract isn't present it falls back to the native Windows engine. It looks for `tesseract.exe` next to the executable, on the `PATH`, or in the standard install locations. To ship it self-contained, include the Tesseract folder (with `tessdata`) next to the `.exe`.
 
-## 🔄 Publicar una nueva versión (mantenedores)
+## 🔄 Publishing a new version (maintainers)
 
 <details>
-<summary>Flujo de release + firma del updater</summary>
+<summary>Release flow and updater signing</summary>
 
-1. Sube el número de versión en `src-tauri/tauri.conf.json` y `Cargo.toml`.
-2. Compila **firmando** (clave privada `src-tauri/screencut.key`, nunca subir al repo):
+1. Bump the version in `src-tauri/tauri.conf.json` and `Cargo.toml`.
+2. Build **with signing** (private key `src-tauri/screencut.key`, never committed):
    ```powershell
    $env:TAURI_SIGNING_PRIVATE_KEY = Get-Content src-tauri\screencut.key -Raw
    $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
    cargo tauri build
    ```
-   Genera en `src-tauri/target/release/bundle/nsis/`: `*-setup.exe` y su firma `*-setup.exe.sig`.
-3. Crea un **Release de GitHub** (etiqueta `vX.Y.Z`) y sube el `*-setup.exe` y un `latest.json`:
+   This produces `*-setup.exe` and its signature `*-setup.exe.sig` in `src-tauri/target/release/bundle/nsis/`.
+3. Create a **GitHub Release** (tag `vX.Y.Z`) and upload the `*-setup.exe` plus a `latest.json`:
    ```json
    {
      "version": "0.2.0",
-     "notes": "Novedades…",
+     "notes": "What's new…",
      "pub_date": "2026-01-01T00:00:00Z",
      "platforms": {
        "windows-x86_64": {
-         "signature": "<contenido completo de *-setup.exe.sig>",
+         "signature": "<full contents of *-setup.exe.sig>",
          "url": "https://github.com/AlexPJ/screen-cut/releases/download/v0.2.0/ScreenCut_0.2.0_x64-setup.exe"
        }
      }
    }
    ```
 
-La app instalada compara su versión con la de `latest.json` (`.../releases/latest/download/latest.json`) y ofrece actualizar.
+The installed app compares its version against `latest.json` (served from `.../releases/latest/download/latest.json`) and offers to update.
 
 </details>
 
-## 📄 Licencia
+## 📄 License
 
 [MIT](LICENSE) © Alejandro Padilla
 
 <div align="center">
-<sub>Hecho con Rust + Tauri. Ligero por diseño.</sub>
+<sub>Built with Rust + Tauri. Small by design.</sub>
 </div>
