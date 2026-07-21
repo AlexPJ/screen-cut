@@ -56,10 +56,19 @@ fn main() {
             app::commands::ocr_png,
             app::commands::set_prtsc_shortcut,
             app::commands::set_hotkey_shortcut,
+            app::commands::get_screenshots_dir,
+            app::commands::get_default_screenshots_dir,
+            app::commands::set_screenshots_dir,
         ])
         .setup(|app| {
             // Atajo por defecto: Ctrl+Shift+X (siempre activo).
             app::commands::register_default_hotkey(app.handle());
+
+            // Carga las preferencias persistidas (carpeta de autoguardado, etc.).
+            {
+                let state: tauri::State<app::state::AppState> = app.state();
+                *state.settings.lock().unwrap() = app::settings::Settings::load(app.handle());
+            }
 
             // Icono de bandeja: mantiene la app viva para responder a Impr Pant.
             let capture_i =

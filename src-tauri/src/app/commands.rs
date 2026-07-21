@@ -1,13 +1,16 @@
+use crate::app::settings::Settings;
 use crate::app::state::AppState;
 use crate::core::types::{CaptureInfo, OcrResult, RawImage};
 use crate::infra::{capture, clipboard, ocr, png_io, scroll};
 use serde::Serialize;
 use std::os::windows::process::CommandExt;
+use std::path::PathBuf;
 use std::process::Command;
 use std::thread::sleep;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut};
+use windows::Win32::System::SystemInformation::GetLocalTime;
 
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
@@ -78,11 +81,49 @@ fn to_info(img: &RawImage) -> Result<CaptureInfo, String> {
         width: img.width,
         height: img.height,
         png_base64: png_io::encode_png_base64(img)?,
+        saved_path: None,
     })
 }
 
+/// Marca de tiempo local "AAAA-MM-DD_HH-mm-ss-mmm" sin depender de crates de
+/// fecha/hora: usa la hora local del sistema vía WinAPI.
+fn local_timestamp() -> String {
+    let st = unsafe { GetLocalTime() };
+    format!(
+        "{:04}-{:02}-{:02}_{:02}-{:02}-{:02}-{:03}",
+        st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds
+    )
+}
+
+/// Autoguarda la captura en la carpeta configurada por el usuario.
+/// Devuelve la ruta final si tiene éxito.
+fn auto_save(app: &AppHandle, img: &RawImage) -> Result<PathBuf, String> {
+    let dir = {
+        let state: State<AppState> = app.state();
+        let guard = state.settings.lock().unwrap();
+        guard.screenshots_dir.clone()
+    };
+    crate::app::settings::ensure_dir(&dir)?;
+    let path = dir.join(format!("Captura_{}.png", local_timestamp()));
+    let bytes = png_io::encode_png(img)?;
+    std::fs::write(&path, bytes).map_err(|e| e.to_string())?;
+    Ok(path)
+}
+
+/// Guarda la captura en el estado, la copia al portapapeles y la autoguarda
+/// en disco (ambos "best-effort": si fallan, no impiden mostrar la captura).
 fn store_and_notify(app: &AppHandle, img: RawImage) -> Result<CaptureInfo, String> {
-    let info = to_info(&img)?;
+    let mut info = to_info(&img)?;
+
+    let _ = clipboard::copy_image(&img);
+
+    match auto_save(app, &img) {
+        Ok(path) => info.saved_path = Some(path.to_string_lossy().to_string()),
+        Err(e) => {
+            let _ = app.emit("capture-error", format!("No se pudo autoguardar la captura: {e}"));
+        }
+    }
+
     let state: State<AppState> = app.state();
     *state.last_capture.lock().unwrap() = Some(img);
     let _ = app.emit("capture-ready", info.clone());
@@ -414,4 +455,25 @@ pub fn ocr_png(png_base64: String) -> Result<OcrResult, String> {
     let bytes = decode_data_url(&png_base64)?;
     let img = png_io::decode_png_to_bgra(&bytes)?;
     ocr::recognize(&img)
+}
+
+// --- Carpeta de autoguardado de capturas (configurable en Ajustes) ---
+
+#[tauri::command]
+pub fn get_screenshots_dir(state: State<AppState>) -> String {
+    state.settings.lock().unwrap().screenshots_dir.to_string_lossy().to_string()
+}
+
+#[tauri::command]
+pub fn get_default_screenshots_dir() -> String {
+    Settings::default_for_platform().screenshots_dir.to_string_lossy().to_string()
+}
+
+#[tauri::command]
+pub fn set_screenshots_dir(app: AppHandle, state: State<AppState>, path: String) -> Result<(), String> {
+    let dir = PathBuf::from(path);
+    crate::app::settings::ensure_dir(&dir)?;
+    let mut settings = state.settings.lock().unwrap();
+    settings.screenshots_dir = dir;
+    settings.save(&app)
 }

@@ -32,7 +32,7 @@ ScreenCut does what the Windows Snipping Tool does, but **faster and with superp
 - 🔔 **Lives in the system tray** — always ready, with an optional start-with-Windows setting.
 - 🌗 **Light/dark theme**, remembered between sessions.
 - 🔄 **Signed automatic updates** built into the app.
-- 💾 **Copy to clipboard** or **save as PNG**, annotations included.
+- 💾 **Every capture is copied to the clipboard and saved to disk automatically** — no extra click. The destination folder defaults to your OS Pictures folder (`Pictures\Screenshots` on Windows) and is configurable in Settings. You can still **copy** or **save as PNG** the edited/annotated version manually from the bottom bar.
 
 ## 📸 Screenshots
 
@@ -108,6 +108,7 @@ Once installed, the app updates itself: **Settings → About → Check for updat
 - In **Settings**, enable **"Use Print Screen"**: it registers Print Screen as a global shortcut for region capture and turns off the Windows mapping to the Snipping Tool so this shortcut wins.
 - **"Start with Windows"** launches the app in the background at sign-in.
 - **Closing** the window hides it in the **system tray**, so the shortcut keeps working. To quit completely: right-click the tray icon → **Quit**.
+- **Settings → Guardado** lets you pick where captures are auto-saved (defaults to your OS Pictures folder).
 
 ## 🛠️ Build from source
 

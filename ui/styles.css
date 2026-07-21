@@ -337,6 +337,15 @@ kbd {
   background: var(--panel-2); padding: 10px 12px; border-radius: 10px;
 }
 
+.folder-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.folder-input {
+  flex: 1; min-width: 0;
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; font-size: 12px; font-family: Consolas, monospace;
+  text-overflow: ellipsis;
+}
+
 /* Interruptor */
 .switch {
   appearance: none; -webkit-appearance: none;

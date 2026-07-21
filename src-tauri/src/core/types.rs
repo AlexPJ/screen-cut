@@ -42,6 +42,8 @@ pub struct CaptureInfo {
     pub height: u32,
     /// PNG codificado en base64 (data URL sin prefijo).
     pub png_base64: String,
+    /// Ruta donde se autoguardó la captura, si el autoguardado tuvo éxito.
+    pub saved_path: Option<String>,
 }
 
 #[derive(Serialize, Clone)]

@@ -5,7 +5,7 @@
   const $ = (id) => document.getElementById(id);
 
   const overlay = $("settings-overlay");
-  const open = () => { overlay.classList.remove("hidden"); refreshAbout(); };
+  const open = () => { overlay.classList.remove("hidden"); refreshAbout(); refreshFolder(); };
   const close = () => overlay.classList.add("hidden");
 
   $("btn-settings").onclick = open;
@@ -46,6 +46,31 @@
     } catch (e) {
       autostart.checked = !autostart.checked;
       status("No se pudo cambiar el inicio automático: " + e, "err");
+    }
+  };
+
+  // ---- Carpeta de capturas (autoguardado) ----
+  const folderInput = $("opt-folder");
+  async function refreshFolder() {
+    try { folderInput.value = await invoke("get_screenshots_dir"); } catch {}
+  }
+  $("btn-folder-browse").onclick = async () => {
+    try {
+      const dir = await T.dialog.open({ directory: true, defaultPath: folderInput.value || undefined });
+      if (!dir) return;
+      await invoke("set_screenshots_dir", { path: dir });
+      folderInput.value = dir;
+    } catch (e) {
+      status("No se pudo cambiar la carpeta: " + e, "err");
+    }
+  };
+  $("btn-folder-reset").onclick = async () => {
+    try {
+      const def = await invoke("get_default_screenshots_dir");
+      await invoke("set_screenshots_dir", { path: def });
+      folderInput.value = def;
+    } catch (e) {
+      status("No se pudo restaurar la carpeta: " + e, "err");
     }
   };
 

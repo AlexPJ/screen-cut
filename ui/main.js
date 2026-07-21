@@ -232,7 +232,10 @@ $("btn-save").onclick = () => safe(async () => {
 });
 
 // ---------- Eventos del backend ----------
-listen("capture-ready", (e) => showCaptureUI(e.payload));
+listen("capture-ready", (e) => {
+  showCaptureUI(e.payload);
+  toast(e.payload.saved_path ? "Copiado al portapapeles y guardado" : "Copiado al portapapeles");
+});
 listen("capture-error", (e) => { $("progress").classList.add("hidden"); toast(e.payload); });
 listen("scroll-progress", (e) => {
   const p = $("progress");
