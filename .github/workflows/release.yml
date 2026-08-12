@@ -1,0 +1,50 @@
+name: Release
+
+# Tag a commit with vX.Y.Z (matching the version in tauri.conf.json and
+# Cargo.toml) and this builds, signs and publishes the installer, plus the
+# latest.json the in-app updater reads.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the installer so the updater will accept it. The key comes
+          # from src-tauri/screencut.key, which is never committed.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # The key has no password. Kept as a literal rather than a secret
+          # because an empty secret is not reliably exported into the job, and
+          # the signer then fails with "Wrong password for that key" after an
+          # otherwise successful build. There is nothing to hide here — the
+          # empty string is the password.
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        with:
+          projectPath: .
+          tagName: ${{ github.ref_name }}
+          releaseName: ScreenCut ${{ github.ref_name }}
+          releaseBody: |
+            Download `ScreenCut_*_x64-setup.exe` below and run it.
+
+            Already installed? The app updates itself: **Settings -> About -> Check for updates**.
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
