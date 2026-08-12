@@ -142,33 +142,50 @@ Uses **Tesseract** (LSTM engine) invoked as an external process, with image pre-
 
 ## 🔄 Publishing a new version (maintainers)
 
-<details>
-<summary>Release flow and updater signing</summary>
+Releases are built and signed by GitHub Actions.
 
-1. Bump the version in `src-tauri/tauri.conf.json` and `Cargo.toml`.
-2. Build **with signing** (private key `src-tauri/screencut.key`, never committed):
+1. Bump the version in `src-tauri/tauri.conf.json` **and** `src-tauri/Cargo.toml`.
+2. Commit, then tag and push:
    ```powershell
-   $env:TAURI_SIGNING_PRIVATE_KEY = Get-Content src-tauri\screencut.key -Raw
-   $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
-   cargo tauri build
+   git tag v0.2.0
+   git push origin v0.2.0
    ```
-   This produces `*-setup.exe` and its signature `*-setup.exe.sig` in `src-tauri/target/release/bundle/nsis/`.
-3. Create a **GitHub Release** (tag `vX.Y.Z`) and upload the `*-setup.exe` plus a `latest.json`:
-   ```json
-   {
-     "version": "0.2.0",
-     "notes": "What's new…",
-     "pub_date": "2026-01-01T00:00:00Z",
-     "platforms": {
-       "windows-x86_64": {
-         "signature": "<full contents of *-setup.exe.sig>",
-         "url": "https://github.com/AlexPJ/screen-cut/releases/download/v0.2.0/ScreenCut_0.2.0_x64-setup.exe"
-       }
-     }
-   }
-   ```
+3. The **Release** workflow builds on a Windows runner, signs the installer and publishes a GitHub release with the `.exe`, its `.sig` and `latest.json`.
 
 The installed app compares its version against `latest.json` (served from `.../releases/latest/download/latest.json`) and offers to update.
+
+<details>
+<summary>One-time setup: updater signing secrets</summary>
+
+The signing keypair lives in `src-tauri/screencut.key` (private, git-ignored) and `src-tauri/screencut.key.pub` (public, pasted into `tauri.conf.json` as `plugins.updater.pubkey`).
+
+Add two repository secrets under **Settings → Secrets and variables → Actions**:
+
+| Secret | Value |
+| --- | --- |
+| `TAURI_SIGNING_PRIVATE_KEY` | the full contents of `src-tauri/screencut.key` |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | empty (the key has no password) |
+
+To copy the private key to the clipboard:
+
+```powershell
+Get-Content src-tauri\screencut.key -Raw | Set-Clipboard
+```
+
+Keep a backup of that file somewhere safe. Lose it and existing installs can no longer verify updates.
+
+</details>
+
+<details>
+<summary>Building a release locally instead</summary>
+
+```powershell
+$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content src-tauri\screencut.key -Raw
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
+cargo tauri build
+```
+
+The installer and its signature land in `src-tauri/target/release/bundle/nsis/`.
 
 </details>
 
