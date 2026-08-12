@@ -28,10 +28,15 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Signs the installer so the updater will accept it. Both come from
-          # the keypair in src-tauri/screencut.key, which is never committed.
+          # Signs the installer so the updater will accept it. The key comes
+          # from src-tauri/screencut.key, which is never committed.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # The key has no password. Kept as a literal rather than a secret
+          # because an empty secret is not reliably exported into the job, and
+          # the signer then fails with "Wrong password for that key" after an
+          # otherwise successful build. There is nothing to hide here — the
+          # empty string is the password.
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           projectPath: .
           tagName: ${{ github.ref_name }}
