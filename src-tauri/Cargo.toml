@@ -1,6 +1,6 @@
 [package]
 name = "screen-cut"
-version = "0.1.0"
+version = "0.1.1"
 description = "Ligera herramienta de capturas con OCR y captura con scroll"
 edition = "2021"
 
