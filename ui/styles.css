@@ -34,7 +34,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body, #app { height: 100%; }
 body {
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: "Segoe UI", -apple-system, system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
@@ -86,6 +86,10 @@ button svg { width: 16px; height: 16px; }
 .tb-btn .ic-restore { display: none; }
 .maximized .tb-btn .ic-restore { display: block; }
 .maximized .tb-btn .ic-max { display: none; }
+
+/* macOS: semáforos nativos superpuestos a la izquierda (tauri.macos.conf.json). */
+[data-platform="mac"] .tb-win { display: none; }
+[data-platform="mac"] .tb-brand { padding-left: 80px; }
 
 /* ---------- Barra de acciones ---------- */
 .topbar {

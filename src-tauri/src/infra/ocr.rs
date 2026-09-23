@@ -1,17 +1,26 @@
 //! OCR con Tesseract (binario externo) + preprocesado de imagen.
-//! Se llama a `tesseract.exe` como proceso (sin FFI ni linkado de C/C++, para
+//! Se llama a `tesseract` como proceso (sin FFI ni linkado de C/C++, para
 //! mantener el build ligero). Si Tesseract no está disponible, se cae al motor
-//! nativo de Windows (`Windows.Media.Ocr`).
+//! nativo del sistema: `Windows.Media.Ocr` en Windows y Vision en macOS.
 
 use crate::core::types::{OcrLine, OcrResult, RawImage};
-use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::OnceLock;
 
-/// Evita que aparezca una ventana de consola al invocar tesseract.
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+/// Prepara un proceso hijo. En Windows evita que aparezca una ventana de consola.
+fn command(program: impl AsRef<std::ffi::OsStr>) -> Command {
+    #[allow(unused_mut)]
+    let mut cmd = Command::new(program);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd
+}
 
 pub fn recognize(img: &RawImage) -> Result<OcrResult, String> {
     match tesseract_path() {
@@ -37,7 +46,7 @@ fn recognize_tesseract(img: &RawImage, exe: &Path) -> Result<OcrResult, String> 
     std::fs::write(&tmp, &png).map_err(|e| format!("temp OCR: {e}"))?;
 
     let l = langs(exe);
-    let out = Command::new(exe)
+    let out = command(exe)
         .arg(&tmp)
         .arg("stdout")
         .arg("-l")
@@ -46,7 +55,6 @@ fn recognize_tesseract(img: &RawImage, exe: &Path) -> Result<OcrResult, String> 
         .arg("6") // bloque uniforme de texto: bueno para terminales/capturas
         .arg("--oem")
         .arg("1") // motor LSTM (mejor precisión)
-        .creation_flags(CREATE_NO_WINDOW)
         .output()
         .map_err(|e| format!("Tesseract: {e}"));
     let _ = std::fs::remove_file(&tmp);
@@ -78,26 +86,16 @@ fn recognize_tesseract(img: &RawImage, exe: &Path) -> Result<OcrResult, String> 
 
 /// Localiza `tesseract.exe`. Orden: junto al .exe de la app (bundle/sidecar),
 /// PATH, instalación estándar del sistema, y carpeta de usuario. Cacheado.
+#[cfg(windows)]
 fn tesseract_path() -> Option<&'static Path> {
     static P: OnceLock<Option<PathBuf>> = OnceLock::new();
     P.get_or_init(|| {
         // 1. Junto al ejecutable de la app (para distribución empaquetada).
-        if let Ok(exe) = std::env::current_exe() {
-            if let Some(dir) = exe.parent() {
-                for rel in ["tesseract\\tesseract.exe", "tesseract.exe"] {
-                    let p = dir.join(rel);
-                    if p.exists() {
-                        return Some(p);
-                    }
-                }
-            }
+        if let Some(p) = next_to_exe(&["tesseract\\tesseract.exe", "tesseract.exe"]) {
+            return Some(p);
         }
         // 2. PATH.
-        if let Ok(out) = Command::new("where")
-            .arg("tesseract")
-            .creation_flags(CREATE_NO_WINDOW)
-            .output()
-        {
+        if let Ok(out) = command("where").arg("tesseract").output() {
             if out.status.success() {
                 if let Some(line) = String::from_utf8_lossy(&out.stdout).lines().next() {
                     let p = PathBuf::from(line.trim());
@@ -120,15 +118,43 @@ fn tesseract_path() -> Option<&'static Path> {
     .as_deref()
 }
 
+/// Localiza `tesseract`. Orden: junto al ejecutable de la app, PATH y rutas
+/// habituales de Homebrew/MacPorts/distros. Las apps de macOS abiertas desde
+/// el Finder no heredan el PATH de la shell, de ahí las rutas fijas. Cacheado.
+#[cfg(not(windows))]
+fn tesseract_path() -> Option<&'static Path> {
+    static P: OnceLock<Option<PathBuf>> = OnceLock::new();
+    P.get_or_init(|| {
+        if let Some(p) = next_to_exe(&["tesseract/tesseract", "tesseract"]) {
+            return Some(p);
+        }
+        let from_path = std::env::var_os("PATH")
+            .map(|paths| std::env::split_paths(&paths).map(|d| d.join("tesseract")).collect::<Vec<_>>())
+            .unwrap_or_default();
+        let known = [
+            "/opt/homebrew/bin/tesseract",
+            "/usr/local/bin/tesseract",
+            "/opt/local/bin/tesseract",
+            "/usr/bin/tesseract",
+        ]
+        .map(PathBuf::from);
+        from_path.into_iter().chain(known).find(|p| p.is_file())
+    })
+    .as_deref()
+}
+
+fn next_to_exe(rels: &[&str]) -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let dir = exe.parent()?;
+    rels.iter().map(|rel| dir.join(rel)).find(|p| p.is_file())
+}
+
 /// Idiomas a usar: preferimos inglés + español si están instalados. Cacheado.
 fn langs(exe: &Path) -> String {
     static L: OnceLock<String> = OnceLock::new();
     L.get_or_init(|| {
         let mut avail = Vec::new();
-        if let Ok(out) = Command::new(exe)
-            .arg("--list-langs")
-            .creation_flags(CREATE_NO_WINDOW)
-            .output()
+        if let Ok(out) = command(exe).arg("--list-langs").output()
         {
             for l in String::from_utf8_lossy(&out.stdout).lines().skip(1) {
                 avail.push(l.trim().to_string());
@@ -238,6 +264,17 @@ fn upscale2x(src: &[u8], w: u32, h: u32) -> (u32, u32, Vec<u8>) {
 
 // ============================ Fallback nativo ============================
 
+#[cfg(target_os = "linux")]
+fn recognize_native(_img: &RawImage) -> Result<OcrResult, String> {
+    Err("Para usar el OCR instala Tesseract (por ejemplo: sudo apt install tesseract-ocr tesseract-ocr-spa).".into())
+}
+
+#[cfg(target_os = "macos")]
+fn recognize_native(img: &RawImage) -> Result<OcrResult, String> {
+    crate::infra::macos::recognize_text(img)
+}
+
+#[cfg(windows)]
 fn recognize_native(img: &RawImage) -> Result<OcrResult, String> {
     use windows::Graphics::Imaging::{BitmapPixelFormat, SoftwareBitmap};
     use windows::Media::Ocr::OcrEngine;
@@ -295,6 +332,7 @@ fn recognize_native(img: &RawImage) -> Result<OcrResult, String> {
     Ok(OcrResult { text: full, lines, language })
 }
 
+#[cfg(windows)]
 fn downscale(img: &RawImage, max_dim: u32) -> RawImage {
     let scale = (max_dim as f64 / img.width.max(img.height) as f64).min(1.0);
     let nw = ((img.width as f64 * scale) as u32).max(1);

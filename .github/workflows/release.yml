@@ -1,8 +1,10 @@
 name: Release
 
 # Tag a commit with vX.Y.Z (matching the version in tauri.conf.json and
-# Cargo.toml) and this builds, signs and publishes the installer, plus the
-# latest.json the in-app updater reads.
+# Cargo.toml) and this builds, signs and publishes the installers for Windows,
+# macOS and Linux, plus the latest.json the in-app updater reads. Each platform
+# job uploads its files to the same GitHub release and merges its entries into
+# latest.json.
 on:
   push:
     tags:
@@ -14,12 +16,32 @@ permissions:
 
 jobs:
   release:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            args: ""
+          # One universal binary for Apple Silicon and Intel Macs.
+          - platform: macos-latest
+            args: "--target universal-apple-darwin"
+          # The oldest supported Ubuntu keeps the AppImage/deb compatible with
+          # older glibc versions.
+          - platform: ubuntu-22.04
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: ./.github/scripts/linux-deps.sh
+
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -39,12 +61,17 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           projectPath: .
+          args: ${{ matrix.args }}
           tagName: ${{ github.ref_name }}
           releaseName: ScreenCut ${{ github.ref_name }}
           releaseBody: |
-            Download `ScreenCut_*_x64-setup.exe` below and run it.
+            **Windows:** download `ScreenCut_*_x64-setup.exe` and run it.
 
-            Already installed? The app updates itself: **Settings -> About -> Check for updates**.
+            **macOS (Apple Silicon and Intel):** download `ScreenCut_*_universal.dmg`, open it and drag ScreenCut to Applications. The app is not notarised, so the first time macOS blocks it: open **System Settings → Privacy & Security** and click **Open Anyway**.
+
+            **Linux:** `.deb` (Debian/Ubuntu), `.rpm` (Fedora/openSUSE) or the portable `.AppImage`.
+
+            Already installed? The app updates itself: **Settings -> About -> Check for updates** (on Linux, only the AppImage updates itself).
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true

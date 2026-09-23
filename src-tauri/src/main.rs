@@ -116,6 +116,13 @@ fn main() {
                 }
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error al iniciar ScreenCut");
+        .build(tauri::generate_context!())
+        .expect("error al iniciar ScreenCut")
+        .run(|_app, _event| {
+            // macOS: clic en el icono del Dock con la ventana oculta en la bandeja.
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { has_visible_windows: false, .. } = _event {
+                show_main(_app);
+            }
+        });
 }

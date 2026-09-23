@@ -1,18 +1,17 @@
 use crate::app::settings::Settings;
 use crate::app::state::AppState;
 use crate::core::types::{CaptureInfo, OcrResult, RawImage};
-use crate::infra::{capture, clipboard, ocr, png_io, scroll};
+use crate::infra::capture::{self, Screen};
+use crate::infra::{clipboard, ocr, png_io, scroll};
 use serde::Serialize;
-use std::os::windows::process::CommandExt;
 use std::path::PathBuf;
-use std::process::Command;
 use std::thread::sleep;
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
+use tauri::{
+    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, PhysicalPosition, PhysicalSize,
+    State, WebviewUrl, WebviewWindowBuilder,
+};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut};
-use windows::Win32::System::SystemInformation::GetLocalTime;
-
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 // ---------- Atajos globales ----------
 
@@ -58,9 +57,12 @@ pub fn set_hotkey_shortcut(app: AppHandle, accelerator: String) -> Result<(), St
     gs.register(sc).map_err(|e| e.to_string())
 }
 
+#[cfg(windows)]
 fn set_windows_snip_key(enabled_for_snip: bool) {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
     let val = if enabled_for_snip { "1" } else { "0" };
-    let _ = Command::new("reg")
+    let _ = std::process::Command::new("reg")
         .args([
             "add",
             r"HKCU\Control Panel\Keyboard",
@@ -76,6 +78,10 @@ fn set_windows_snip_key(enabled_for_snip: bool) {
         .output();
 }
 
+/// Fuera de Windows no hay un mapeo del sistema que desactivar.
+#[cfg(not(windows))]
+fn set_windows_snip_key(_enabled_for_snip: bool) {}
+
 fn to_info(img: &RawImage) -> Result<CaptureInfo, String> {
     Ok(CaptureInfo {
         width: img.width,
@@ -87,11 +93,34 @@ fn to_info(img: &RawImage) -> Result<CaptureInfo, String> {
 
 /// Marca de tiempo local "AAAA-MM-DD_HH-mm-ss-mmm" sin depender de crates de
 /// fecha/hora: usa la hora local del sistema vía WinAPI.
+#[cfg(windows)]
 fn local_timestamp() -> String {
+    use windows::Win32::System::SystemInformation::GetLocalTime;
     let st = unsafe { GetLocalTime() };
     format!(
         "{:04}-{:02}-{:02}_{:02}-{:02}-{:02}-{:03}",
         st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds
+    )
+}
+
+/// Igual que la versión de Windows, con `localtime_r` de libc.
+#[cfg(not(windows))]
+fn local_timestamp() -> String {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    let secs = now.as_secs() as libc::time_t;
+    let mut tm: libc::tm = unsafe { std::mem::zeroed() };
+    unsafe { libc::localtime_r(&secs, &mut tm) };
+    format!(
+        "{:04}-{:02}-{:02}_{:02}-{:02}-{:02}-{:03}",
+        tm.tm_year + 1900,
+        tm.tm_mon + 1,
+        tm.tm_mday,
+        tm.tm_hour,
+        tm.tm_min,
+        tm.tm_sec,
+        now.subsec_millis()
     )
 }
 
@@ -134,11 +163,10 @@ fn store_and_notify(app: &AppHandle, img: RawImage) -> Result<CaptureInfo, Strin
 pub fn capture_fullscreen(app: AppHandle) -> Result<(), String> {
     // Todo el trabajo va a un hilo aparte: no se puede bloquear el event loop.
     std::thread::spawn(move || {
-        if let Some(w) = app.get_webview_window("main") {
-            let _ = w.minimize();
+        if hide_main(&app) {
             sleep(Duration::from_millis(400));
         }
-        let result = capture::capture_virtual_screen().map(|(img, _)| img);
+        let result = capture::capture_screen().map(|(img, _)| img);
         show_main(&app);
         match result {
             Ok(img) => {
@@ -167,15 +195,13 @@ fn open_region_overlay_inner(app: &AppHandle) -> Result<(), String> {
     if app.get_webview_window("overlay").is_some() {
         return Ok(());
     }
-    if let Some(w) = app.get_webview_window("main") {
-        let _ = w.minimize();
-    }
+    hide_main(app);
     sleep(Duration::from_millis(400));
 
-    let (img, vs) = capture::capture_virtual_screen()?;
+    let (img, screen) = capture::capture_screen()?;
     {
         let state: State<AppState> = app.state();
-        *state.overlay_capture.lock().unwrap() = Some((img, vs.x, vs.y));
+        *state.overlay_capture.lock().unwrap() = Some((img, screen));
     }
 
     let win = WebviewWindowBuilder::new(app, "overlay", WebviewUrl::App("overlay.html".into()))
@@ -189,13 +215,30 @@ fn open_region_overlay_inner(app: &AppHandle) -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    win.set_position(tauri::PhysicalPosition::new(vs.x, vs.y))
-        .map_err(|e| e.to_string())?;
-    win.set_size(tauri::PhysicalSize::new(vs.width as u32, vs.height as u32))
-        .map_err(|e| e.to_string())?;
+    place_window(&win, screen.x, screen.y, screen.width, screen.height)?;
+    #[cfg(target_os = "macos")]
+    crate::infra::macos::raise_overlay(&win);
+    // En Linux el gestor de ventanas puede recolocar la ventana (y en Wayland
+    // ignora la posición): pantalla completa garantiza que cubra el monitor.
+    #[cfg(target_os = "linux")]
+    win.set_fullscreen(true).map_err(|e| e.to_string())?;
     win.show().map_err(|e| e.to_string())?;
     win.set_focus().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// Coloca una ventana en coordenadas del SO (ver `capture::Screen`): puntos en
+/// macOS, píxeles físicos en Windows y Linux.
+fn place_window(win: &tauri::WebviewWindow, x: i32, y: i32, width: i32, height: i32) -> Result<(), String> {
+    let result = if cfg!(target_os = "macos") {
+        win.set_position(LogicalPosition::new(x as f64, y as f64)).and_then(|_| {
+            win.set_size(LogicalSize::new(width as f64, height as f64))
+        })
+    } else {
+        win.set_position(PhysicalPosition::new(x, y))
+            .and_then(|_| win.set_size(PhysicalSize::new(width as u32, height as u32)))
+    };
+    result.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -209,7 +252,7 @@ pub fn get_capture_png(app: AppHandle, which: String) -> Result<CaptureInfo, Str
     let state: State<AppState> = app.state();
     if which == "overlay" {
         let guard = state.overlay_capture.lock().unwrap();
-        let (img, _, _) = guard.as_ref().ok_or("No hay captura de overlay")?;
+        let (img, _) = guard.as_ref().ok_or("No hay captura de overlay")?;
         to_info(img)
     } else {
         let guard = state.last_capture.lock().unwrap();
@@ -224,8 +267,8 @@ struct ScrollProgress {
     total_px: u32,
 }
 
-/// El overlay llama aquí con la región elegida (en píxeles físicos, relativos
-/// al escritorio virtual) y el modo: "region", "scroll-down" o "scroll-right".
+/// El overlay llama aquí con la región elegida (en píxeles de la captura,
+/// relativos a la pantalla que cubre el overlay) y el modo: "region", "scroll-down" o "scroll-right".
 #[tauri::command]
 pub fn finish_region_selection(
     app: AppHandle,
@@ -253,11 +296,11 @@ fn finish_region_selection_inner(
     height: u32,
     mode: &str,
 ) -> Result<(), String> {
-    let (vx, vy) = {
+    let screen = {
         let state: State<AppState> = app.state();
         let guard = state.overlay_capture.lock().unwrap();
-        let (_, vx, vy) = guard.as_ref().ok_or("No hay captura de overlay")?;
-        (*vx, *vy)
+        let (_, screen) = guard.as_ref().ok_or("No hay captura de overlay")?;
+        *screen
     };
     close_overlay(app);
 
@@ -265,7 +308,7 @@ fn finish_region_selection_inner(
         let img = {
             let state: State<AppState> = app.state();
             let guard = state.overlay_capture.lock().unwrap();
-            let (img, _, _) = guard.as_ref().ok_or("No hay captura de overlay")?;
+            let (img, _) = guard.as_ref().ok_or("No hay captura de overlay")?;
             img.crop(x, y, width, height)
         };
         show_main(app);
@@ -286,16 +329,17 @@ fn finish_region_selection_inner(
         flag.store(false, std::sync::atomic::Ordering::Relaxed);
         flag
     };
-    open_scroll_control(app, vx + x as i32, vy + y as i32, width as i32, height as i32)?;
+    open_scroll_control(app, &screen, x, y, height)?;
 
     let app2 = app.clone();
     std::thread::spawn(move || {
         sleep(Duration::from_millis(350)); // deja desaparecer el overlay
         let result = scroll::scrolling_capture(
-            vx + x as i32,
-            vy + y as i32,
-            width as i32,
-            height as i32,
+            &screen,
+            x,
+            y,
+            width,
+            height,
             dir,
             &stop,
             |step, total_px| {
@@ -318,26 +362,23 @@ fn finish_region_selection_inner(
     Ok(())
 }
 
-/// Ventanita flotante con el botón "Terminar", colocada fuera de la región.
-fn open_scroll_control(
-    app: &AppHandle,
-    rx: i32,
-    ry: i32,
-    _rw: i32,
-    rh: i32,
-) -> Result<(), String> {
-    const W: u32 = 360;
-    const H: u32 = 64;
-    let vs = capture::virtual_screen();
+/// Ventanita flotante con el botón "Terminar", colocada fuera de la región
+/// (dada en píxeles de la captura, relativos a `screen`).
+fn open_scroll_control(app: &AppHandle, screen: &Screen, x: u32, y: u32, height: u32) -> Result<(), String> {
+    // Tamaño en unidades del SO.
+    const W: i32 = 360;
+    const H: i32 = 64;
+    let (rx, ry) = screen.point_to_os(x, y);
+    let rh = screen.len_to_os(height);
     // Encima de la región si hay hueco; si no, debajo; si tampoco, esquina superior.
-    let cy = if ry - vs.y > (H as i32 + 24) {
-        ry - H as i32 - 16
-    } else if (vs.y + vs.height) - (ry + rh) > (H as i32 + 24) {
+    let cy = if ry - screen.y > H + 24 {
+        ry - H - 16
+    } else if (screen.y + screen.height) - (ry + rh) > H + 24 {
         ry + rh + 16
     } else {
-        vs.y + 16
+        screen.y + 16
     };
-    let cx = (rx).max(vs.x + 8);
+    let cx = rx.max(screen.x + 8);
 
     let win = WebviewWindowBuilder::new(
         app,
@@ -354,10 +395,7 @@ fn open_scroll_control(
     .visible(false)
     .build()
     .map_err(|e| e.to_string())?;
-    win.set_position(tauri::PhysicalPosition::new(cx, cy))
-        .map_err(|e| e.to_string())?;
-    win.set_size(tauri::PhysicalSize::new(W, H))
-        .map_err(|e| e.to_string())?;
+    place_window(&win, cx, cy, W, H)?;
     win.show().map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -381,6 +419,19 @@ fn close_overlay(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("overlay") {
         let _ = w.close();
     }
+}
+
+/// Quita la ventana principal de en medio antes de capturar. Devuelve si estaba.
+/// En Windows se minimiza (sigue en la barra de tareas); en macOS y Linux se
+/// oculta, porque minimizar anima la ventana hacia el Dock y tarda más.
+fn hide_main(app: &AppHandle) -> bool {
+    let Some(w) = app.get_webview_window("main") else { return false };
+    if cfg!(windows) {
+        let _ = w.minimize();
+    } else {
+        let _ = w.hide();
+    }
+    true
 }
 
 fn show_main(app: &AppHandle) {

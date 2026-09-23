@@ -1,0 +1,61 @@
+name: Build
+
+# Builds the installers for every platform on pull requests, without
+# publishing anything. The bundles are kept as workflow artifacts for testing.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            args: ""
+          - platform: macos-latest
+            args: "--target universal-apple-darwin"
+          - platform: ubuntu-22.04
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: ./.github/scripts/linux-deps.sh
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # No tagName: tauri-action only builds. The signing key is needed because
+      # the updater artifacts are part of the bundle.
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        with:
+          projectPath: .
+          args: ${{ matrix.args }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundles-${{ runner.os }}
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/rpm/*.rpm
+            src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: error

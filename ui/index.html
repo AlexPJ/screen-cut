@@ -4,6 +4,11 @@
   <meta charset="utf-8" />
   <title>ScreenCut</title>
   <link rel="stylesheet" href="styles.css" />
+  <script>
+    // Plataforma: ajusta atajos, textos y barra de título (ver styles.css y main.js).
+    document.documentElement.dataset.platform =
+      /Mac/.test(navigator.userAgent) ? "mac" : /Windows/.test(navigator.userAgent) ? "windows" : "linux";
+  </script>
 </head>
 <body>
   <!-- Sprite de iconos (trazo, 24x24): se referencia con <use href="#i-…"> -->
@@ -52,7 +57,8 @@
   </svg>
 
   <div id="app">
-    <!-- Barra de título propia: sigue el tema (la nativa de Windows no puede) -->
+    <!-- Barra de título propia: sigue el tema (la nativa de Windows no puede).
+         En macOS se ocultan estos botones y quedan los semáforos nativos. -->
     <header class="titlebar" id="titlebar">
       <div class="tb-brand">
         <span class="tb-logo"><svg><use href="#i-scissors"/></svg></span>
@@ -208,15 +214,15 @@
         <div class="modal-body">
           <section class="set-group">
             <h3>Atajos y captura</h3>
-            <label class="set-row">
-              <span class="set-label"><b>Usar Impr Pant (Print Screen)</b><small>Pulsa Impr Pant para capturar una región. Desactiva el mapeo de Windows a «Recortes» para que gane este atajo.</small></span>
+            <label class="set-row" id="row-prtsc">
+              <span class="set-label"><b>Usar Impr Pant (Print Screen)</b><small id="prtsc-desc">Pulsa Impr Pant para capturar una región. Desactiva el mapeo de Windows a «Recortes» para que gane este atajo.</small></span>
               <input type="checkbox" id="opt-prtsc" class="switch" />
             </label>
             <label class="set-row">
-              <span class="set-label"><b>Iniciar con Windows</b><small>Arranca ScreenCut en segundo plano al iniciar sesión, listo para el atajo.</small></span>
+              <span class="set-label"><b id="autostart-label">Iniciar con Windows</b><small>Arranca ScreenCut en segundo plano al iniciar sesión, listo para el atajo.</small></span>
               <input type="checkbox" id="opt-autostart" class="switch" />
             </label>
-            <p class="set-note">Al cerrar la ventana, la app permanece en la bandeja del sistema para seguir respondiendo al atajo. Para salir del todo: clic derecho en el icono de la bandeja → <b>Salir</b>.</p>
+            <p class="set-note" id="tray-note">Al cerrar la ventana, la app permanece en la bandeja del sistema para seguir respondiendo al atajo. Para salir del todo: clic derecho en el icono de la bandeja → <b>Salir</b>.</p>
           </section>
 
           <section class="set-group">
