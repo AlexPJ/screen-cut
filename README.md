@@ -192,6 +192,7 @@ Releases are built and signed by GitHub Actions.
    git tag v0.2.0
    git push origin v0.2.0
    ```
+   A tag with a suffix, like `v0.3.0-beta.1`, publishes a **pre-release**: the files are downloadable, but installed apps are not offered the update, because the updater reads `releases/latest`, which skips pre-releases.
 3. The **Release** workflow builds on Windows, macOS and Linux runners, signs the updater artifacts and publishes one GitHub release with every installer, their `.sig` files and a `latest.json` covering all platforms.
 
 Pull requests run the **Build** workflow, which builds the same installers without publishing and keeps them as workflow artifacts.

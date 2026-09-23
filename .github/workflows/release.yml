@@ -73,5 +73,8 @@ jobs:
 
             Already installed? The app updates itself: **Settings -> About -> Check for updates** (on Linux, only the AppImage updates itself).
           releaseDraft: false
-          prerelease: false
+          # Tags like v1.2.0-beta.1 publish a pre-release. The in-app updater
+          # reads releases/latest, which skips pre-releases, so existing
+          # installs are not offered it.
+          prerelease: ${{ contains(github.ref_name, '-') }}
           includeUpdaterJson: true
