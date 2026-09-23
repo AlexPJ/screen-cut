@@ -30,7 +30,7 @@ ScreenCut does what the Windows Snipping Tool does, but **faster and with superp
 - 🎨 **Annotation editor** — arrows, lines, rectangles, ellipses, text, highlighter and freehand drawing. Pick colour and thickness, fill (none / stroke colour / custom colour), move and resize, eraser, **undo/redo** and **cropping**.
 - 🔍 **Zoom and fit** — the image fits the window by default; zoom in/out from the bottom bar.
 - ⏱️ **Configurable timer** (3 s by default) with an on-screen countdown.
-- ⌨️ **Global shortcut** — `Ctrl+Shift+X` (`⌃⇧X` on macOS), or turn **Print Screen** into your default capture key (Windows and Linux).
+- ⌨️ **Global shortcut** — `Ctrl+Shift+X` (`⇧⌘X` on macOS), or turn **Print Screen** into your default capture key (Windows and Linux).
 - 🔔 **Lives in the system tray / menu bar** — always ready, with an optional launch-at-login setting.
 - 🌗 **Light/dark theme**, remembered between sessions.
 - 🔄 **Signed automatic updates** built into the app.
@@ -120,7 +120,7 @@ Once installed, the app updates itself: **Settings → About → Check for updat
 
 | Action | How |
 | --- | --- |
-| Capture a region | **Region** button or `Ctrl+Shift+X` (or Print Screen, if enabled) |
+| Capture a region | **Region** button or `Ctrl+Shift+X` (`⇧⌘X` on macOS, or Print Screen if enabled) |
 | Full screen | **Screen** button |
 | Scrolling capture | **Vertical/Horizontal scroll** → select the area → **Finish** when you're done |
 | Extract text (OCR) | **OCR** button |

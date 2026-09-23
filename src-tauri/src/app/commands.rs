@@ -15,14 +15,17 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut}
 
 // ---------- Atajos globales ----------
 
+/// Ctrl+Shift+X en Windows y Linux; ⇧⌘X en macOS, donde los atajos de sistema
+/// usan ⌘ (como ⇧⌘4 para las capturas nativas).
 fn region_hotkey() -> Shortcut {
-    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyX)
+    let modifier = if cfg!(target_os = "macos") { Modifiers::SUPER } else { Modifiers::CONTROL };
+    Shortcut::new(Some(modifier | Modifiers::SHIFT), Code::KeyX)
 }
 fn prtsc_hotkey() -> Shortcut {
     Shortcut::new(None, Code::PrintScreen)
 }
 
-/// Registra el atajo por defecto (Ctrl+Shift+X) al arrancar.
+/// Registra el atajo por defecto (Ctrl+Shift+X, ⇧⌘X en macOS) al arrancar.
 pub fn register_default_hotkey(app: &AppHandle) {
     let _ = app.global_shortcut().register(region_hotkey());
 }
