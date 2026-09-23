@@ -42,10 +42,10 @@ features = [
 # macOS y Linux: captura con xcap y portapapeles con arboard. En Windows se
 # siguen usando GDI y Win32 directamente (más rápido y sin dependencias extra).
 [target.'cfg(not(windows))'.dependencies]
-xcap = "0.9"
 libc = "0.2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
+xcap = "0.9"
 arboard = { version = "3", default-features = false, features = ["image-data"] }
 objc2 = "0.6"
 objc2-foundation = "0.3"
@@ -54,7 +54,10 @@ objc2-core-foundation = "0.3"
 objc2-core-graphics = "0.3"
 objc2-vision = "0.3"
 
+# xcap 0.5+ también enlaza PipeWire (para grabar vídeo, que no usamos), cuyas
+# bindings no compilan con las cabeceras de Ubuntu 22.04. La 0.4 captura igual.
 [target.'cfg(target_os = "linux")'.dependencies]
+xcap = "0.4"
 arboard = { version = "3", default-features = false, features = ["image-data", "wayland-data-control"] }
 x11rb = { version = "0.13", features = ["xtest"] }
 
