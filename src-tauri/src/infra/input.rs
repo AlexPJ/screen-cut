@@ -108,6 +108,7 @@ mod imp {
     };
     use x11rb::protocol::xtest::ConnectionExt as _;
     use x11rb::rust_connection::RustConnection;
+    use x11rb::wrapper::ConnectionExt as _;
 
     fn connect() -> Result<(RustConnection, u32), String> {
         let (conn, screen) = x11rb::connect(None)
