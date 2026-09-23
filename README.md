@@ -106,9 +106,9 @@ Everything is on the **[releases page](https://github.com/AlexPJ/screen-cut/rele
 
 | Distro | File | Install |
 | --- | --- | --- |
-| Debian, Ubuntu, Mint… | `screen-cut_x.y.z_amd64.deb` | `sudo apt install ./screen-cut_x.y.z_amd64.deb` |
-| Fedora, openSUSE… | `screen-cut-x.y.z-1.x86_64.rpm` | `sudo dnf install ./screen-cut-x.y.z-1.x86_64.rpm` |
-| Any | `screen-cut_x.y.z_amd64.AppImage` | `chmod +x` it and run it |
+| Debian, Ubuntu, Mint… | `ScreenCut_x.y.z_amd64.deb` | `sudo apt install ./ScreenCut_x.y.z_amd64.deb` |
+| Fedora, openSUSE… | `ScreenCut-x.y.z-1.x86_64.rpm` | `sudo dnf install ./ScreenCut-x.y.z-1.x86_64.rpm` |
+| Any | `ScreenCut_x.y.z_amd64.AppImage` | `chmod +x` it and run it |
 
 The `.deb` and `.rpm` pull in Tesseract for OCR. With the AppImage, install it yourself (`sudo apt install tesseract-ocr tesseract-ocr-spa`).
 
