@@ -4,6 +4,18 @@ const { listen } = window.__TAURI__.event;
 const appWindow = window.__TAURI__.window.getCurrentWindow();
 
 const $ = (id) => document.getElementById(id);
+const isMac = document.documentElement.dataset.platform === "mac";
+
+// ---------- Atajos según plataforma ----------
+// El atajo global es Ctrl+Shift+X en todas; en macOS se muestra con símbolos y
+// deshacer/rehacer usan ⌘ como el resto de apps del sistema.
+if (isMac) {
+  $("btn-region").title = "Atajo global: ⌃⇧X";
+  document.querySelector(".hint").innerHTML =
+    "Atajo global: <kbd>⌃</kbd><kbd>⇧</kbd><kbd>X</kbd> para capturar una región";
+  $("btn-undo").title = "Deshacer (⌘Z)";
+  $("btn-redo").title = "Rehacer (⇧⌘Z)";
+}
 
 // ---------- Tema (persistido) ----------
 const savedTheme = localStorage.getItem("theme") ||
@@ -194,8 +206,10 @@ $("btn-clear").onclick = () => Editor.clear();
 window.addEventListener("keydown", (e) => {
   // No interferir al escribir en el texto de anotación u OCR
   if (e.target.closest("textarea, input, select")) return;
-  if (e.ctrlKey && e.key.toLowerCase() === "z") { e.preventDefault(); Editor.undo(); }
-  if (e.ctrlKey && (e.key.toLowerCase() === "y")) { e.preventDefault(); Editor.redo(); }
+  const mod = isMac ? e.metaKey : e.ctrlKey;
+  const key = e.key.toLowerCase();
+  if (mod && key === "z" && !e.shiftKey) { e.preventDefault(); Editor.undo(); }
+  if (mod && (key === "y" || (key === "z" && e.shiftKey))) { e.preventDefault(); Editor.redo(); }
   if (e.key === "Delete" || e.key === "Backspace") Editor.deleteSelected();
 });
 

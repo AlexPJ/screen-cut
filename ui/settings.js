@@ -1,8 +1,19 @@
-// Ajustes + Acerca de: atajo Impr Pant, inicio con Windows, versión y updates.
+// Ajustes + Acerca de: atajo Impr Pant, inicio con el sistema, versión y updates.
 (() => {
   const T = window.__TAURI__;
   const invoke = T.core.invoke;
   const $ = (id) => document.getElementById(id);
+  const platform = document.documentElement.dataset.platform;
+
+  // Textos según plataforma (el HTML trae los de Windows).
+  if (platform === "mac") {
+    $("row-prtsc").style.display = "none"; // los teclados de Mac no tienen Impr Pant
+    $("autostart-label").textContent = "Abrir al iniciar sesión";
+    $("tray-note").innerHTML = "Al cerrar la ventana, la app sigue en la barra de menús para responder al atajo. Para salir del todo: icono de la barra de menús → <b>Salir</b>.";
+  } else if (platform === "linux") {
+    $("prtsc-desc").textContent = "Pulsa Impr Pant para capturar una región. Si tu escritorio ya usa esa tecla para su propia herramienta de capturas, desactívala allí.";
+    $("autostart-label").textContent = "Iniciar al iniciar sesión";
+  }
 
   const overlay = $("settings-overlay");
   const open = () => { overlay.classList.remove("hidden"); refreshAbout(); refreshFolder(); };
@@ -36,7 +47,7 @@
   // Aplica la preferencia guardada al arrancar.
   if (prtsc.checked) invoke("set_prtsc_shortcut", { enabled: true }).catch(() => {});
 
-  // ---- Inicio con Windows ----
+  // ---- Inicio con el sistema ----
   const autostart = $("opt-autostart");
   T.autostart.isEnabled().then((v) => (autostart.checked = v)).catch(() => {});
   autostart.onchange = async () => {

@@ -1,5 +1,6 @@
 //! Captura de pantalla vía GDI (BitBlt sobre el escritorio virtual).
 
+use super::Screen;
 use crate::core::types::RawImage;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::Graphics::Gdi::{
@@ -12,26 +13,26 @@ use windows::Win32::UI::WindowsAndMessaging::{
     SM_YVIRTUALSCREEN,
 };
 
-pub struct VirtualScreen {
-    pub x: i32,
-    pub y: i32,
-    pub width: i32,
-    pub height: i32,
-}
-
-pub fn virtual_screen() -> VirtualScreen {
+fn virtual_screen() -> Screen {
     unsafe {
-        VirtualScreen {
+        Screen {
+            id: 0,
             x: GetSystemMetrics(SM_XVIRTUALSCREEN),
             y: GetSystemMetrics(SM_YVIRTUALSCREEN),
             width: GetSystemMetrics(SM_CXVIRTUALSCREEN),
             height: GetSystemMetrics(SM_CYVIRTUALSCREEN),
+            scale: 1.0,
         }
     }
 }
 
+/// Captura un rectángulo de `screen`, en píxeles relativos a su origen.
+pub fn capture_rect(screen: &Screen, x: u32, y: u32, width: u32, height: u32) -> Result<RawImage, String> {
+    blit(screen.x + x as i32, screen.y + y as i32, width as i32, height as i32)
+}
+
 /// Captura un rectángulo en coordenadas de pantalla (físicas).
-pub fn capture_rect(x: i32, y: i32, width: i32, height: i32) -> Result<RawImage, String> {
+fn blit(x: i32, y: i32, width: i32, height: i32) -> Result<RawImage, String> {
     if width <= 0 || height <= 0 {
         return Err("Región de captura vacía".into());
     }
@@ -99,8 +100,9 @@ pub fn capture_rect(x: i32, y: i32, width: i32, height: i32) -> Result<RawImage,
     }
 }
 
-pub fn capture_virtual_screen() -> Result<(RawImage, VirtualScreen), String> {
+/// Captura todo el escritorio virtual (todos los monitores).
+pub fn capture_screen() -> Result<(RawImage, Screen), String> {
     let vs = virtual_screen();
-    let img = capture_rect(vs.x, vs.y, vs.width, vs.height)?;
+    let img = blit(vs.x, vs.y, vs.width, vs.height)?;
     Ok((img, vs))
 }

@@ -5,20 +5,13 @@
 //! al llegar al final del contenido.
 
 use crate::core::types::RawImage;
-use crate::infra::capture;
+use crate::infra::capture::{self, Screen};
+use crate::infra::input;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::sleep;
 use std::time::Duration;
-use windows::Win32::UI::Input::KeyboardAndMouse::{
-    SendInput, INPUT, INPUT_0, INPUT_MOUSE, MOUSEEVENTF_HWHEEL, MOUSEEVENTF_WHEEL, MOUSEINPUT,
-};
-use windows::Win32::UI::WindowsAndMessaging::SetCursorPos;
 
 const MAX_STEPS: usize = 400;
-const WHEEL_DELTA: i32 = 120;
-/// Nº de "clics" de rueda por paso. 1 mantiene el avance por debajo del solape
-/// detectable incluso con inercia, evitando saltarse contenido.
-const CLICKS_PER_STEP: i32 = 1;
 /// Píxeles del borde final (barra de scroll) excluidos del cotejo.
 const SCROLLBAR_MARGIN: u32 = 24;
 /// Pasos consecutivos sin movimiento antes de dar por terminado el contenido.
@@ -36,45 +29,53 @@ pub enum Direction {
     Right,
 }
 
+/// Región `x/y/width/height` en píxeles de la captura, relativos a `screen`.
+#[allow(clippy::too_many_arguments)]
 pub fn scrolling_capture(
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
+    screen: &Screen,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
     dir: Direction,
     stop: &AtomicBool,
     mut on_progress: impl FnMut(usize, u32),
 ) -> Result<RawImage, String> {
-    // El cursor debe estar sobre la región para que Windows enrute la rueda
-    // a la ventana correcta ("scroll de ventanas inactivas", activo por defecto).
-    unsafe {
-        let _ = SetCursorPos(x + width / 2, y + height / 2);
-    }
+    // El cursor debe estar sobre la región para que el sistema enrute la rueda
+    // a la ventana correcta (en Windows, "scroll de ventanas inactivas").
+    let (cx, cy) = screen.point_to_os(x + width / 2, y + height / 2);
+    input::move_cursor(cx, cy);
     sleep(Duration::from_millis(150));
 
-    let first = capture::capture_rect(x, y, width, height)?;
+    // Longitud de la región en el eje del scroll, en unidades del SO.
+    let region_len = screen.len_to_os(if dir == Direction::Down { height } else { width });
+    let grab = || capture::capture_rect(screen, x, y, width, height);
+
+    let first = grab()?;
     let mut stitched = first.clone();
     let mut prev = first;
     let mut idle = 0usize;
+    // Sentido invertido de la rueda (ver más abajo).
+    let mut reverse = false;
 
     for step in 0..MAX_STEPS {
         if stop.load(Ordering::Relaxed) {
             break;
         }
-        send_wheel(dir, -WHEEL_DELTA * CLICKS_PER_STEP);
+        input::scroll_step(dir == Direction::Right, reverse, region_len)?;
         sleep(Duration::from_millis(KICK_MS));
 
         // Espera activa a que el scroll (con inercia en apps Electron/Chrome)
         // se detenga: capturamos hasta que dos fotogramas consecutivos sean
         // idénticos. Solo entonces medimos el desplazamiento contra `prev`.
         // Esto evita medir "en pleno vuelo" y perder el solapamiento.
-        let mut frame = capture::capture_rect(x, y, width, height)?;
+        let mut frame = grab()?;
         for _ in 0..SETTLE_MAX_POLLS {
             if stop.load(Ordering::Relaxed) {
                 break;
             }
             sleep(Duration::from_millis(SETTLE_POLL_MS));
-            let next = capture::capture_rect(x, y, width, height)?;
+            let next = grab()?;
             let stable = frames_equal(&frame, &next);
             frame = next;
             if stable {
@@ -103,6 +104,9 @@ pub fn scrolling_capture(
                 };
                 on_progress(step + 1, total);
             }
+            // macOS: con el "scroll natural" activado, la rueda simulada puede ir
+            // al revés. Si el primer paso no avanza, se prueba el sentido contrario.
+            None if cfg!(target_os = "macos") && step == 0 => reverse = true,
             None => {
                 idle += 1;
                 if idle >= IDLE_STEPS_TO_STOP {
@@ -118,28 +122,6 @@ pub fn scrolling_capture(
     }
 
     Ok(stitched)
-}
-
-fn send_wheel(dir: Direction, delta: i32) {
-    let flags = match dir {
-        Direction::Down => MOUSEEVENTF_WHEEL,
-        Direction::Right => MOUSEEVENTF_HWHEEL,
-    };
-    // En HWHEEL el signo positivo desplaza a la derecha.
-    let data = if dir == Direction::Right { -delta } else { delta };
-    let input = INPUT {
-        r#type: INPUT_MOUSE,
-        Anonymous: INPUT_0 {
-            mi: MOUSEINPUT {
-                mouseData: data as u32,
-                dwFlags: flags,
-                ..Default::default()
-            },
-        },
-    };
-    unsafe {
-        SendInput(&[input], std::mem::size_of::<INPUT>() as i32);
-    }
 }
 
 /// ¿Son (prácticamente) idénticos dos fotogramas? Se usa para detectar que el
