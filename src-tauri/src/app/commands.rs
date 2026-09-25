@@ -15,14 +15,17 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut}
 
 // ---------- Atajos globales ----------
 
+/// Ctrl+Shift+X en Windows y Linux; ⇧⌘X en macOS, donde los atajos de sistema
+/// usan ⌘ (como ⇧⌘4 para las capturas nativas).
 fn region_hotkey() -> Shortcut {
-    Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyX)
+    let modifier = if cfg!(target_os = "macos") { Modifiers::SUPER } else { Modifiers::CONTROL };
+    Shortcut::new(Some(modifier | Modifiers::SHIFT), Code::KeyX)
 }
 fn prtsc_hotkey() -> Shortcut {
     Shortcut::new(None, Code::PrintScreen)
 }
 
-/// Registra el atajo por defecto (Ctrl+Shift+X) al arrancar.
+/// Registra el atajo por defecto (Ctrl+Shift+X, ⇧⌘X en macOS) al arrancar.
 pub fn register_default_hotkey(app: &AppHandle) {
     let _ = app.global_shortcut().register(region_hotkey());
 }
@@ -231,8 +234,11 @@ fn open_region_overlay_inner(app: &AppHandle) -> Result<(), String> {
 /// macOS, píxeles físicos en Windows y Linux.
 fn place_window(win: &tauri::WebviewWindow, x: i32, y: i32, width: i32, height: i32) -> Result<(), String> {
     let result = if cfg!(target_os = "macos") {
-        win.set_position(LogicalPosition::new(x as f64, y as f64)).and_then(|_| {
-            win.set_size(LogicalSize::new(width as f64, height as f64))
+        // Primero el tamaño: `setContentSize:` de Cocoa mantiene fija la esquina
+        // inferior izquierda, así que redimensionar después de colocar haría
+        // crecer la ventana hacia arriba y la sacaría de la pantalla.
+        win.set_size(LogicalSize::new(width as f64, height as f64)).and_then(|_| {
+            win.set_position(LogicalPosition::new(x as f64, y as f64))
         })
     } else {
         win.set_position(PhysicalPosition::new(x, y))

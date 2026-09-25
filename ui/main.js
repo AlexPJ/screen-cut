@@ -7,12 +7,12 @@ const $ = (id) => document.getElementById(id);
 const isMac = document.documentElement.dataset.platform === "mac";
 
 // ---------- Atajos según plataforma ----------
-// El atajo global es Ctrl+Shift+X en todas; en macOS se muestra con símbolos y
-// deshacer/rehacer usan ⌘ como el resto de apps del sistema.
+// El atajo global es Ctrl+Shift+X, y ⇧⌘X en macOS (ver region_hotkey en
+// commands.rs). En macOS deshacer/rehacer usan ⌘ como el resto de apps.
 if (isMac) {
-  $("btn-region").title = "Atajo global: ⌃⇧X";
+  $("btn-region").title = "Atajo global: ⇧⌘X";
   document.querySelector(".hint").innerHTML =
-    "Atajo global: <kbd>⌃</kbd><kbd>⇧</kbd><kbd>X</kbd> para capturar una región";
+    "Atajo global: <kbd>⇧</kbd><kbd>⌘</kbd><kbd>X</kbd> para capturar una región";
   $("btn-undo").title = "Deshacer (⌘Z)";
   $("btn-redo").title = "Rehacer (⇧⌘Z)";
 }
