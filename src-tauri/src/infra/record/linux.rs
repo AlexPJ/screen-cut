@@ -32,6 +32,8 @@ pub struct Recording {
 /// que en Wayland no se sabe hasta que llega el primer fotograma).
 struct VideoEncoder {
     factory: &'static str,
+    /// Otros elementos que usa (`h264parse` está en plugins-bad).
+    needs: &'static [&'static str],
     /// Formato de entrada: I420 para no acabar en perfiles 4:4:4 que no abre
     /// casi ningún reproductor.
     desc: &'static str,
@@ -45,6 +47,7 @@ const H264: &[VideoEncoder] = &[
     // Por hardware (VA-API): solo existe si hay una GPU que codifique.
     VideoEncoder {
         factory: "vah264enc",
+        needs: &["h264parse"],
         desc: "video/x-raw,format=NV12 ! vah264enc name=venc key-int-max=60 ! h264parse",
         bitrate: "bitrate",
         unit: 1000,
@@ -52,14 +55,17 @@ const H264: &[VideoEncoder] = &[
     },
     VideoEncoder {
         factory: "x264enc",
+        needs: &[],
+        // Ya sale en el formato que quiere mp4mux: no hace falta h264parse.
         desc: "video/x-raw,format=I420 ! x264enc name=venc tune=zerolatency speed-preset=veryfast key-int-max=60 \
-               ! video/x-h264,profile=high ! h264parse",
+               ! video/x-h264,profile=high,stream-format=avc,alignment=au",
         bitrate: "bitrate",
         unit: 1000,
         signed: false,
     },
     VideoEncoder {
         factory: "openh264enc",
+        needs: &["h264parse"],
         desc: "video/x-raw,format=I420 ! openh264enc name=venc gop-size=60 ! h264parse",
         bitrate: "bitrate",
         unit: 1,
@@ -69,6 +75,7 @@ const H264: &[VideoEncoder] = &[
 
 const VP8: VideoEncoder = VideoEncoder {
     factory: "vp8enc",
+    needs: &[],
     desc: "video/x-raw,format=I420 ! vp8enc name=venc deadline=1 cpu-used=8 end-usage=cbr keyframe-max-dist=60 threads=4",
     bitrate: "target-bitrate",
     unit: 1,
@@ -92,7 +99,7 @@ fn available(factory: &str) -> bool {
 }
 
 fn choose_format(audio: bool, warnings: &mut Vec<String>) -> Result<Format, String> {
-    let h264 = H264.iter().find(|e| available(e.factory));
+    let h264 = H264.iter().find(|e| available(e.factory) && e.needs.iter().all(|f| available(f)));
     let aac = AAC.iter().find(|f| available(f));
     if let Some(video) = h264 {
         if !audio || aac.is_some() {
