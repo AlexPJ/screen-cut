@@ -12,8 +12,8 @@ use std::path::PathBuf;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager, State};
 
-/// ¿Hay grabación de vídeo en este sistema? (Linux llega después.)
-pub const SUPPORTED: bool = cfg!(any(target_os = "macos", windows));
+/// ¿Hay grabación de vídeo en este sistema?
+pub const SUPPORTED: bool = cfg!(any(target_os = "macos", windows, target_os = "linux"));
 
 pub struct ActiveRecording {
     recording: Recording,
@@ -109,6 +109,9 @@ pub fn start(app: &AppHandle, target: CaptureTarget) -> Result<(), String> {
             return Err(e);
         }
     };
+    // En Linux puede acabar en WebM si faltan los codificadores de MP4.
+    #[cfg(target_os = "linux")]
+    let path = recording.path().to_path_buf();
     {
         let mut activity = state.activity.lock().unwrap();
         if !matches!(*activity, Activity::Idle) {
@@ -138,7 +141,7 @@ pub fn start(app: &AppHandle, target: CaptureTarget) -> Result<(), String> {
     Ok(())
 }
 
-/// Detiene la grabación en curso y guarda el MP4.
+/// Detiene la grabación en curso y guarda el vídeo.
 pub fn stop(app: &AppHandle) -> Result<(), String> {
     let state: State<AppState> = app.state();
     let active = {
@@ -199,7 +202,7 @@ pub fn stop_recording(app: AppHandle) -> Result<(), String> {
 pub fn reveal_recording(app: AppHandle, path: String) -> Result<(), String> {
     let path = PathBuf::from(path);
     let dir = recordings_dir(&app);
-    if path.parent() != Some(dir.as_path()) || path.extension().is_none_or(|e| e != "mp4") {
+    if path.parent() != Some(dir.as_path()) || path.extension().is_none_or(|e| e != "mp4" && e != "webm") {
         return Err("Ruta no válida".into());
     }
     tauri_plugin_opener::reveal_item_in_dir(path).map_err(|e| e.to_string())

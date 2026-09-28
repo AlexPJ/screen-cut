@@ -231,9 +231,12 @@
   $("btn-sessions-reset").onclick = () => saveSessionSettings({ sessions_dir: null });
   $("opt-rec-system").onchange = (e) => saveSessionSettings({ rec_system_audio: e.target.checked });
   $("opt-rec-mic").onchange = (e) => saveSessionSettings({ rec_mic: e.target.checked });
-  // La grabación de vídeo llega a Windows y Linux más adelante.
+  // Por si algún sistema se queda sin grabación de vídeo.
   invoke("recording_status").then((s) => { $("set-recording").hidden = !s.supported; }).catch(() => {});
   if (platform !== "mac") $("rec-mic-desc").textContent = "Se mezcla con el audio del sistema en la misma pista.";
+  if (platform === "linux") {
+    $("rec-note").textContent = "Los vídeos (MP4, o WebM si faltan los codificadores de GStreamer) se guardan en la carpeta «Grabaciones», dentro de la de capturas. En Wayland, el sistema te pedirá elegir la pantalla o ventana al empezar.";
+  }
 
   // ---- Acerca de / versión ----
   async function refreshAbout() {

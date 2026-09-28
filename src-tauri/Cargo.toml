@@ -97,6 +97,9 @@ cpal = { version = "0.18", features = ["pulseaudio"] }
 gstreamer = "0.25"
 gstreamer-app = "0.25"
 gstreamer-video = "0.25"
+# Wayland: el portal ScreenCast da acceso a la pantalla (con permiso del usuario) vía PipeWire.
+ashpd = { version = "0.13", default-features = false, features = ["tokio", "screencast"] }
+tokio = { version = "1", default-features = false, features = ["rt", "sync"] }
 
 [profile.release]
 opt-level = "z"
