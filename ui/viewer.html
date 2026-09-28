@@ -49,12 +49,20 @@
     <div id="v-resizer" class="v-resizer" title="Arrastra para cambiar el ancho"></div>
 
     <aside class="v-side">
-      <h2>Transcripción</h2>
+      <div class="v-side-head">
+        <h2>Transcripción</h2>
+        <span id="v-tstatus" class="v-tstatus"></span>
+      </div>
+      <div id="v-tactions" class="v-tactions" hidden>
+        <select id="v-lang" title="Idioma de la transcripción"></select>
+        <button id="v-transcribe" class="v-btn v-btn-small">Transcribir</button>
+      </div>
       <div id="v-transcript" class="v-transcript"></div>
     </aside>
   </div>
   <p id="v-readonly" class="v-note" hidden>Solo lectura. Abre la sesión en ScreenCut para editar los tiempos de las imágenes.</p>
 
+  <script src="languages.js"></script>
   <script src="timeline.js"></script>
   <script src="viewer.js"></script>
 </body>

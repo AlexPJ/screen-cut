@@ -7,6 +7,9 @@ use xcap::Window;
 
 /// Ventanas visibles, de la de delante a la de atrás, sin las de ScreenCut.
 pub fn list() -> Result<Vec<WindowInfo>, String> {
+    // Sin el permiso, macOS oculta los títulos de las ventanas ajenas y xcap
+    // las descarta todas: mejor explicar por qué la lista sale vacía.
+    ensure_permission()?;
     let own = std::process::id();
     let windows = Window::all().map_err(|e| format!("No se pudieron listar las ventanas: {e}"))?;
     #[cfg(target_os = "macos")]

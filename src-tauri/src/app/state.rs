@@ -22,6 +22,8 @@ pub struct AppState {
     pub activity: Mutex<Activity>,
     /// Qué hacer con lo que se elija en el selector: "capture" o "session".
     pub picker_purpose: Mutex<String>,
+    /// Idioma elegido en el selector para la sesión que va a empezar.
+    pub session_language: Mutex<Option<String>>,
     /// Opciones de la bandeja cuyo texto cambia al empezar/terminar una sesión.
     pub tray_session_item: Mutex<Option<MenuItem<Wry>>>,
     pub tray_capture_item: Mutex<Option<MenuItem<Wry>>>,

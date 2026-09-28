@@ -1,19 +1,23 @@
-//! `index.html` autocontenido de una sesión: el mismo visor que se usa dentro
-//! de la app, con el CSS, el JS y los datos incrustados. Las imágenes van por
+//! Archivos que acompañan a una sesión: `index.html` autocontenido (el mismo
+//! visor que se usa dentro de la app, con el CSS, el JS y los datos
+//! incrustados) y la transcripción en TXT, SRT y Markdown. Las imágenes van por
 //! ruta relativa, así que funciona abriéndolo desde el Finder o el Explorador
 //! mientras esté junto a sus carpetas `images/` y `thumbs/`.
 
 use super::model::Session;
 use super::store::write_atomic;
+use super::transcript;
 use std::path::Path;
 
 const HTML: &str = include_str!("../../../../ui/viewer.html");
 const CSS: &str = include_str!("../../../../ui/viewer.css");
+const LANGUAGES_JS: &str = include_str!("../../../../ui/languages.js");
 const TIMELINE_JS: &str = include_str!("../../../../ui/timeline.js");
 const VIEWER_JS: &str = include_str!("../../../../ui/viewer.js");
 
 const CSS_TAG: &str = r#"<link rel="stylesheet" href="viewer.css" />"#;
-const JS_TAGS: &str = "<script src=\"timeline.js\"></script>\n  <script src=\"viewer.js\"></script>";
+const JS_TAGS: &str =
+    "<script src=\"languages.js\"></script>\n  <script src=\"timeline.js\"></script>\n  <script src=\"viewer.js\"></script>";
 
 /// Dentro de un `<script>`, "</" cerraría la etiqueta antes de tiempo.
 fn inline_script(code: &str) -> String {
@@ -26,8 +30,9 @@ pub fn render(session: &Session) -> Result<String, String> {
     }
     let data = serde_json::to_string(session).map_err(|e| e.to_string())?;
     let scripts = format!(
-        "<script id=\"session-data\" type=\"application/json\">{}</script>\n  <script>\n{}\n</script>\n  <script>\n{}\n</script>",
+        "<script id=\"session-data\" type=\"application/json\">{}</script>\n  <script>\n{}\n</script>\n  <script>\n{}\n</script>\n  <script>\n{}\n</script>",
         inline_script(&data),
+        inline_script(LANGUAGES_JS),
         inline_script(TIMELINE_JS),
         inline_script(VIEWER_JS),
     );
@@ -36,12 +41,18 @@ pub fn render(session: &Session) -> Result<String, String> {
         .replace(JS_TAGS, &scripts))
 }
 
-pub fn write_index(dir: &Path, session: &Session) -> Result<(), String> {
-    write_atomic(&dir.join("index.html"), render(session)?.as_bytes())
+pub fn write_outputs(dir: &Path, session: &Session) -> Result<(), String> {
+    write_atomic(&dir.join("index.html"), render(session)?.as_bytes())?;
+    if !session.segments.is_empty() {
+        write_atomic(&dir.join("transcript.txt"), transcript::to_txt(session).as_bytes())?;
+        write_atomic(&dir.join("transcript.srt"), transcript::to_srt(session).as_bytes())?;
+        write_atomic(&dir.join("transcript.md"), transcript::to_md(session).as_bytes())?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::app::session::model::{Segment, Status, FORMAT_VERSION};
     use crate::app::target::CaptureTarget;
@@ -64,6 +75,7 @@ mod tests {
                 text: "</script><script>alert(1)</script>".into(),
             }],
             audio: Vec::new(),
+            transcript: None,
         }
     }
 
@@ -73,7 +85,7 @@ mod tests {
         assert!(!html.contains(CSS_TAG) && !html.contains("src=\"viewer.js\""));
         assert!(html.contains("id=\"session-data\""));
         // Solo el cierre de los <script> propios; el texto no puede cerrarlos.
-        assert_eq!(html.matches("</script>").count(), 3);
+        assert_eq!(html.matches("</script>").count(), 4);
     }
 }
 

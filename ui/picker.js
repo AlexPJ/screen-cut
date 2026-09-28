@@ -2,6 +2,7 @@
 // región). Qué se hace con lo elegido lo decide el backend según el propósito
 // con el que se abrió: "capture" o "session".
 const { invoke } = window.__TAURI__.core;
+const { listen } = window.__TAURI__.event;
 const appWindow = window.__TAURI__.window.getCurrentWindow();
 document.documentElement.dataset.theme = localStorage.getItem("theme") ||
   (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
@@ -10,6 +11,22 @@ const grid = document.getElementById("grid");
 let sources = { screens: [], windows: [], windows_error: null };
 let tab = "windows";
 let generation = 0; // descarta miniaturas de una lista anterior
+let purpose = "capture";
+
+// En una sesión, antes de elegir se guarda el idioma de la transcripción.
+async function choose(action) {
+  try {
+    if (purpose === "session") {
+      await invoke("set_session_language", {
+        language: document.getElementById("lang").value,
+        remember: document.getElementById("remember").checked,
+      });
+    }
+    await action();
+  } catch (e) {
+    showError(e);
+  }
+}
 
 function card(title, sub, target) {
   const el = document.createElement("button");
@@ -19,7 +36,7 @@ function card(title, sub, target) {
   el.querySelector(".card-sub").textContent = sub;
   el.title = title;
   el.dataset.target = JSON.stringify(target);
-  el.onclick = () => invoke("choose_target", { target }).catch(showError);
+  el.onclick = () => choose(() => invoke("choose_target", { target }));
   return el;
 }
 
@@ -100,15 +117,68 @@ document.getElementById("btn-refresh").onclick = load;
 document.getElementById("btn-cancel").onclick = () => appWindow.close();
 addEventListener("keydown", (e) => { if (e.key === "Escape") appWindow.close(); });
 
-invoke("get_picker_purpose").then((purpose) => {
+invoke("get_picker_purpose").then((p) => {
+  purpose = p;
   if (purpose !== "session") return;
   document.getElementById("hint").hidden = false;
   const region = document.getElementById("btn-region");
   region.hidden = false;
-  region.onclick = () => {
+  region.onclick = () => choose(() => {
     localStorage.setItem("overlay-mode", "target-session");
-    invoke("choose_region_target").catch(showError);
-  };
+    return invoke("choose_region_target");
+  });
+  setupSession().catch(() => {});
 });
+
+const mb = (bytes) => Math.round(bytes / 1e6) + " MB";
+
+// Idioma de la transcripción y aviso si no hay modelo descargado.
+async function setupSession() {
+  const [setup, info] = await Promise.all([invoke("session_setup"), invoke("get_transcription_info")]);
+  const opts = document.getElementById("session-opts");
+  opts.hidden = false;
+  Languages.fill(document.getElementById("lang"), info.languages, setup.language);
+  document.getElementById("remember").checked = setup.remember;
+
+  const note = document.getElementById("model-note");
+  const text = document.getElementById("model-text");
+  const button = document.getElementById("btn-download");
+  const bar = document.getElementById("model-progress");
+  if (!setup.records_audio) {
+    note.hidden = false;
+    text.textContent = "Esta sesión no grabará audio: actívalo en Ajustes → Transcripción.";
+    return;
+  }
+  if (setup.model) return;
+  note.hidden = false;
+  text.textContent = "No hay ningún modelo de transcripción descargado. Puedes empezar igualmente: " +
+    "el audio se guarda y se transcribirá al terminar si el modelo ya está listo.";
+  button.hidden = false;
+  button.textContent = `Descargar «${setup.wanted.label}» (${mb(setup.wanted.size)})`;
+  button.onclick = async () => {
+    button.disabled = true;
+    bar.hidden = false;
+    try {
+      await invoke("download_model", { id: setup.wanted.id });
+    } catch (e) {
+      text.textContent = "No se pudo descargar el modelo: " + e;
+      button.disabled = false;
+      bar.hidden = true;
+    }
+  };
+  listen("model-download", (e) => {
+    const p = e.payload;
+    if (p.id !== setup.wanted.id) return;
+    if (p.state === "progress") {
+      bar.hidden = false;
+      button.disabled = true;
+      bar.value = p.done / p.total;
+      button.textContent = `Descargando… ${mb(p.done)} de ${mb(p.total)}`;
+    } else if (p.state === "done") {
+      text.textContent = `Modelo «${setup.wanted.label}» listo: la sesión se transcribirá.`;
+      button.hidden = bar.hidden = true;
+    }
+  });
+}
 
 load();

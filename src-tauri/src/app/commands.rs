@@ -436,6 +436,60 @@ pub fn set_screenshots_dir(app: AppHandle, state: State<AppState>, path: String)
     settings.save(&app)
 }
 
+// --- Sesiones y transcripción (Ajustes → Transcripción) ---
+
+/// Ajustes que la sección puede leer y cambiar (el modelo va aparte, con
+/// `set_whisper_model`).
+const SESSION_KEYS: &[&str] = &[
+    "transcription_language",
+    "remember_language",
+    "transcribe_live",
+    "max_image_secs",
+    "session_mic",
+    "session_system_audio",
+    "keep_session_audio",
+    "sessions_dir",
+];
+
+fn session_settings_json(settings: &Settings) -> serde_json::Value {
+    let mut out = serde_json::Map::new();
+    if let Ok(serde_json::Value::Object(all)) = serde_json::to_value(settings) {
+        out.extend(all.into_iter().filter(|(k, _)| SESSION_KEYS.contains(&k.as_str())));
+    }
+    out.insert("sessions_dir_effective".into(), settings.sessions_dir().to_string_lossy().into());
+    serde_json::Value::Object(out)
+}
+
+#[tauri::command]
+pub fn get_session_settings(state: State<AppState>) -> serde_json::Value {
+    session_settings_json(&state.settings.lock().unwrap())
+}
+
+/// Cambia algunos de esos ajustes (`sessions_dir: null` vuelve a la carpeta por
+/// defecto) y devuelve cómo quedan.
+#[tauri::command]
+pub fn update_session_settings(
+    app: AppHandle,
+    state: State<AppState>,
+    patch: serde_json::Map<String, serde_json::Value>,
+) -> Result<serde_json::Value, String> {
+    let mut settings = state.settings.lock().unwrap();
+    let mut all = serde_json::to_value(&*settings).map_err(|e| e.to_string())?;
+    for (key, value) in patch {
+        if !SESSION_KEYS.contains(&key.as_str()) {
+            return Err(format!("Ajuste desconocido: {key}"));
+        }
+        all[key] = value;
+    }
+    let updated: Settings = serde_json::from_value(all).map_err(|e| format!("Ajuste no válido: {e}"))?;
+    if let Some(dir) = &updated.sessions_dir {
+        crate::app::settings::ensure_dir(dir)?;
+    }
+    *settings = updated;
+    settings.save(&app)?;
+    Ok(session_settings_json(&settings))
+}
+
 // --- Transcripción ---
 
 #[derive(Serialize)]

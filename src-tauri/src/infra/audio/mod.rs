@@ -4,9 +4,10 @@
 mod device;
 mod resample;
 mod track;
-mod wav;
+pub(crate) mod wav;
 
 pub use device::Source;
+pub use wav::{available_samples, read_samples};
 
 use std::path::PathBuf;
 use std::sync::mpsc;

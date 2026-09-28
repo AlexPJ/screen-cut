@@ -12,6 +12,7 @@
   let rs = [];         // intervalos de cada imagen
   let current = -1;    // imagen mostrada
   let cache = new Map();
+  let progress = null; // { done_ms, total_ms } de la transcripción en curso
 
   function store(key, value) {
     try {
@@ -42,6 +43,7 @@
   async function open(id) {
     S = inApp ? await invoke("load_session", { id }) : JSON.parse($("session-data").textContent);
     cache = new Map();
+    progress = null;
     render();
   }
   window.openSession = (id) => open(id).catch(showError);
@@ -66,6 +68,7 @@
 
     renderStrip();
     renderTranscript();
+    renderTranscriptState();
     recompute();
     select(S.images.length ? 0 : -1);
   }
@@ -122,7 +125,16 @@
     if (!S.segments.length) {
       const p = document.createElement("p");
       p.className = "v-empty";
-      p.textContent = "Esta sesión no tiene transcripción.";
+      const t = S.transcript;
+      p.textContent = !t
+        ? "Esta sesión no grabó audio."
+        : t.status === "running" || t.status === "pending"
+          ? "La transcripción irá apareciendo aquí."
+          : t.status === "no_model"
+            ? "El audio está guardado, pero no había ningún modelo de transcripción. Descarga uno en Ajustes → Sesiones y transcripción y pulsa Transcribir."
+            : t.status === "failed"
+              ? "No se pudo transcribir el audio."
+              : "No se reconoció ninguna frase en el audio.";
       list.appendChild(p);
       return;
     }
@@ -136,6 +148,40 @@
       b.onclick = () => showAt(seg.start_ms);
       b.dataset.start = seg.start_ms;
       list.appendChild(b);
+    }
+  }
+
+  // Estado de la transcripción y botón para (re)transcribir.
+  function renderTranscriptState() {
+    const t = S.transcript;
+    const el = $("v-tstatus");
+    el.classList.remove("err");
+    el.title = "";
+    let text = "";
+    if (t) {
+      const lang = t.language === "auto" ? "idioma automático" : Languages.name(t.language);
+      if (t.status === "running") {
+        text = progress && progress.total_ms
+          ? `Transcribiendo… ${Timeline.fmt(progress.done_ms)} de ${Timeline.fmt(progress.total_ms)}`
+          : "Transcribiendo…";
+      } else if (t.status === "pending") text = "Pendiente";
+      else if (t.status === "no_model") text = "Sin modelo descargado";
+      else if (t.status === "failed") {
+        text = "Error";
+        el.classList.add("err");
+        el.title = t.error || "";
+        if (t.error) text += ": " + t.error;
+      } else text = lang;
+    }
+    el.textContent = text;
+
+    const hasAudio = (S.audio || []).length > 0 || (t && S.status === "interrupted");
+    const canRun = inApp && t && hasAudio && t.status !== "running";
+    $("v-tactions").hidden = !canRun;
+    if (canRun) {
+      $("v-transcribe").textContent = S.segments.length ? "Transcribir de nuevo" : "Transcribir";
+      $("v-transcribe").disabled = false;
+      $("v-lang").value = t.language;
     }
   }
 
@@ -185,7 +231,8 @@
     }
   }
 
-  function updateHighlights() {
+  // `scroll` = false al recargar la transcripción, para no mover lo que se lee.
+  function updateHighlights(scroll = true) {
     document.querySelectorAll(".v-thumb").forEach((b, i) => b.classList.toggle("active", i === current));
     document.querySelectorAll(".v-block").forEach((b, i) => b.classList.toggle("active", i === current));
     const r = rs[current];
@@ -196,6 +243,7 @@
       line.classList.toggle("in-image", inside);
       if (inside && !first) first = line;
     });
+    if (!scroll) return;
     document.querySelector(".v-thumb.active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
     first?.scrollIntoView({ block: "nearest" });
   }
@@ -235,6 +283,61 @@
     save();
   };
   $("v-reveal").onclick = () => invoke("reveal_session", { id: S.id }).catch(showError);
+
+  // ---------- Transcripción (solo dentro de la app) ----------
+  if (inApp) {
+    invoke("get_transcription_info")
+      .then((info) => {
+        Languages.fill($("v-lang"), info.languages, S && S.transcript ? S.transcript.language : "auto");
+      })
+      .catch(() => {});
+
+    $("v-transcribe").onclick = async () => {
+      if (S.segments.length) {
+        const ok = await T.dialog.ask("Se sustituirá la transcripción actual.", { title: "Transcribir de nuevo", kind: "warning" });
+        if (!ok) return;
+      }
+      $("v-transcribe").disabled = true;
+      try {
+        await invoke("transcribe_session", { id: S.id, language: $("v-lang").value });
+        await refreshTranscript();
+      } catch (e) {
+        $("v-transcribe").disabled = false;
+        $("v-tstatus").textContent = String(e);
+        $("v-tstatus").classList.add("err");
+      }
+    };
+
+    // Recarga solo la transcripción, sin tocar la imagen que se está viendo.
+    async function refreshTranscript() {
+      const fresh = await invoke("load_session", { id: S.id });
+      S.segments = fresh.segments;
+      S.transcript = fresh.transcript;
+      S.audio = fresh.audio;
+      renderTranscript();
+      renderTranscriptState();
+      updateHighlights(false);
+    }
+    let reloadTimer = null;
+    T.event.listen("session-transcript", (e) => {
+      const p = e.payload;
+      if (!S || p.id !== S.id) return;
+      progress = p.status === "running" ? p : null;
+      if (p.status !== "running") {
+        clearTimeout(reloadTimer);
+        reloadTimer = null;
+        refreshTranscript().catch(showError);
+        return;
+      }
+      renderTranscriptState();
+      if (!reloadTimer) {
+        reloadTimer = setTimeout(() => {
+          reloadTimer = null;
+          refreshTranscript().catch(() => {});
+        }, 1000);
+      }
+    });
+  }
 
   let saveTimer;
   function save() {

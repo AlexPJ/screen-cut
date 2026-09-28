@@ -37,6 +37,33 @@ pub struct Session {
     /// Pistas de audio grabadas (WAV de 16 kHz mono, alineados con el inicio).
     #[serde(default)]
     pub audio: Vec<AudioTrack>,
+    /// Estado de la transcripción. `None` = sesión sin audio.
+    #[serde(default)]
+    pub transcript: Option<TranscriptInfo>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum TranscriptStatus {
+    /// Hay audio pero aún no se ha empezado (se hará al terminar la sesión).
+    Pending,
+    Running,
+    Done,
+    Failed,
+    /// Hay audio pero no hay ningún modelo descargado.
+    NoModel,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct TranscriptInfo {
+    pub status: TranscriptStatus,
+    /// Idioma pedido: "auto" o un código ISO 639-1.
+    pub language: String,
+    /// Id del modelo usado.
+    #[serde(default)]
+    pub model: Option<String>,
+    #[serde(default)]
+    pub error: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -67,7 +94,7 @@ pub struct SessionImage {
     pub height: u32,
 }
 
-/// Un fragmento de la transcripción (se rellena a partir del M4).
+/// Un fragmento de la transcripción.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Segment {
     pub start_ms: u64,
@@ -88,6 +115,7 @@ pub struct SessionSummary {
     pub status: Status,
     pub images: usize,
     pub target: String,
+    pub transcript: Option<TranscriptStatus>,
 }
 
 impl CaptureTarget {
