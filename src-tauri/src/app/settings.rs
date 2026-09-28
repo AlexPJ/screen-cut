@@ -64,6 +64,11 @@ impl Settings {
         }
     }
 
+    /// Carpeta efectiva de las sesiones.
+    pub fn sessions_dir(&self) -> PathBuf {
+        self.sessions_dir.clone().unwrap_or_else(|| self.screenshots_dir.join("Sesiones"))
+    }
+
     fn config_path(app: &AppHandle) -> Option<PathBuf> {
         app.path().app_config_dir().ok().map(|d| d.join("settings.json"))
     }
@@ -108,7 +113,8 @@ mod tests {
         let s: Settings = serde_json::from_str(r#"{"screenshots_dir":"/tmp/caps"}"#).unwrap();
         assert_eq!(s.screenshots_dir, PathBuf::from("/tmp/caps"));
         assert_eq!(s.transcription_language, "auto");
-        assert!(!s.remember_language && s.sessions_dir.is_none());
+        assert!(!s.remember_language);
+        assert_eq!(s.sessions_dir(), PathBuf::from("/tmp/caps/Sesiones"));
     }
 
     #[test]

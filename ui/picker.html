@@ -36,6 +36,7 @@
     .thumb .err { color: var(--text-dim); font-size: 12px; padding: 8px; text-align: center; }
     .card-title { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .card-sub { color: var(--text-dim); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hint { padding: 10px 16px 0; color: var(--text-dim); font-size: 13px; }
     .empty { grid-column: 1 / -1; color: var(--text-dim); text-align: center; padding: 48px 16px; line-height: 1.6; }
   </style>
 </head>
@@ -45,10 +46,12 @@
       <button class="tab active" data-tab="windows">Ventanas</button>
       <button class="tab" data-tab="screens">Pantallas</button>
     </div>
+    <button id="btn-region" class="btn btn-small" hidden>Región…</button>
     <span class="spacer"></span>
     <button id="btn-refresh" class="btn btn-small">Actualizar</button>
     <button id="btn-cancel" class="btn btn-small">Cancelar</button>
   </div>
+  <p id="hint" class="hint" hidden>Elige la ventana, la pantalla o la región que quieres fijar: durante la sesión, el atajo de captura la capturará al instante.</p>
   <div id="grid" class="grid"></div>
   <script src="picker.js"></script>
 </body>

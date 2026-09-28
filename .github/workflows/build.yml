@@ -41,6 +41,11 @@ jobs:
         if: runner.os == 'Linux'
         run: ./.github/scripts/linux-deps.sh
 
+      # Pure JS logic shared by the in-app viewer and the exported index.html.
+      - name: Frontend tests
+        if: runner.os == 'Linux'
+        run: node --test tests/*.test.js
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
