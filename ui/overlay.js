@@ -14,6 +14,10 @@ if (mode === "scroll-down") {
   help.innerHTML = "Selecciona la zona con <b>scroll vertical</b> · Esc para cancelar";
 } else if (mode === "scroll-right") {
   help.innerHTML = "Selecciona la zona con <b>scroll horizontal</b> · Esc para cancelar";
+} else if (mode === "target-session") {
+  help.innerHTML = "Selecciona la <b>zona fija de la sesión</b> · Esc para cancelar";
+} else if (mode === "target-record") {
+  help.innerHTML = "Selecciona la <b>zona que quieres grabar</b> · Esc para cancelar";
 }
 
 invoke("get_capture_png", { which: "overlay" })

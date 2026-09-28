@@ -41,6 +41,11 @@ jobs:
         if: runner.os == 'Linux'
         run: ./.github/scripts/linux-deps.sh
 
+      # Pure JS logic shared by the in-app viewer and the exported index.html.
+      - name: Frontend tests
+        if: runner.os == 'Linux'
+        run: node --test tests/*.test.js
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
@@ -58,6 +63,16 @@ jobs:
         with:
           projectPath: .
           args: ${{ matrix.args }}
+
+      # Records 3 s of a virtual X screen with the real GStreamer pipeline
+      # (there is no sound server, so it also covers the video-only fallback).
+      - name: Linux recording smoke test
+        if: runner.os == 'Linux'
+        working-directory: src-tauri
+        run: |
+          sudo apt-get install -y xvfb gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-pulseaudio
+          xvfb-run -a -s "-screen 0 1280x800x24" env SCREENCUT_OUT="$RUNNER_TEMP/probe.mp4" \
+            cargo test --release probe_record_linux -- --ignored --nocapture
 
       - uses: actions/upload-artifact@v4
         with:

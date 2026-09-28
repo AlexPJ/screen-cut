@@ -17,7 +17,8 @@ pub struct Settings {
     pub sessions_dir: Option<PathBuf>,
     /// Idioma de la transcripción: "auto" o un código ISO 639-1 ("es", "en"…).
     pub transcription_language: String,
-    /// Si es `true`, no se pregunta el idioma al empezar cada sesión.
+    /// Si es `true`, el idioma de arriba se propone al empezar cada sesión (si
+    /// no, se propone "auto").
     pub remember_language: bool,
     /// Modelo de Whisper (id del catálogo de modelos).
     pub whisper_model: String,
@@ -32,6 +33,9 @@ pub struct Settings {
     pub mic_device: Option<String>,
     /// Conservar el audio de la sesión tras transcribirlo (para re-transcribir).
     pub keep_session_audio: bool,
+    /// Sesiones: grabar el micrófono ("Tú") y el audio del sistema ("Otros").
+    pub session_mic: bool,
+    pub session_system_audio: bool,
 }
 
 impl Default for Settings {
@@ -61,7 +65,14 @@ impl Settings {
             rec_mic: false,
             mic_device: None,
             keep_session_audio: true,
+            session_mic: true,
+            session_system_audio: true,
         }
+    }
+
+    /// Carpeta efectiva de las sesiones.
+    pub fn sessions_dir(&self) -> PathBuf {
+        self.sessions_dir.clone().unwrap_or_else(|| self.screenshots_dir.join("Sesiones"))
     }
 
     fn config_path(app: &AppHandle) -> Option<PathBuf> {
@@ -85,14 +96,8 @@ impl Settings {
     }
 }
 
-/// Con GPU (Metal en Apple Silicon) el modelo grande va sobrado; en el resto
-/// se parte del rápido para no competir por la CPU con la videollamada.
 fn default_whisper_model() -> &'static str {
-    if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        "large-v3-turbo-q5_0"
-    } else {
-        "small-q5_1"
-    }
+    crate::infra::stt::catalog::recommended().id
 }
 
 pub fn ensure_dir(path: &Path) -> Result<(), String> {
@@ -108,7 +113,8 @@ mod tests {
         let s: Settings = serde_json::from_str(r#"{"screenshots_dir":"/tmp/caps"}"#).unwrap();
         assert_eq!(s.screenshots_dir, PathBuf::from("/tmp/caps"));
         assert_eq!(s.transcription_language, "auto");
-        assert!(!s.remember_language && s.sessions_dir.is_none());
+        assert!(!s.remember_language);
+        assert_eq!(s.sessions_dir(), PathBuf::from("/tmp/caps/Sesiones"));
     }
 
     #[test]

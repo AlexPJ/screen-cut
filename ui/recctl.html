@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Grabación de ScreenCut</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: #1f1e1d; color: #faf9f5;
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 8px 0 14px; font-size: 13px;
+      border: 1px solid #3a3937; border-radius: 12px;
+      user-select: none; cursor: default;
+    }
+    .dot {
+      width: 9px; height: 9px; border-radius: 50%; flex: none;
+      background: #e5484d; animation: pulse 1.2s infinite alternate;
+    }
+    @keyframes pulse { to { opacity: 0.35; } }
+    .info { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+    #elapsed { font-variant-numeric: tabular-nums; font-weight: 600; }
+    #target { color: #a29e93; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #target.error { color: #ff8a80; }
+    button {
+      border: 0; color: #fff; padding: 8px 13px; border-radius: 9px; flex: none;
+      font-size: 13px; font-family: inherit; cursor: pointer; background: #e5484d;
+    }
+    button:hover { background: #ec5d61; }
+  </style>
+</head>
+<body data-tauri-drag-region>
+  <span class="dot" data-tauri-drag-region></span>
+  <div class="info" data-tauri-drag-region>
+    <span id="elapsed" data-tauri-drag-region>00:00</span>
+    <span id="target" data-tauri-drag-region></span>
+  </div>
+  <button id="stop" title="Detener y guardar el vídeo">Detener</button>
+  <script>
+    const { invoke } = window.__TAURI__.core;
+    const { listen } = window.__TAURI__.event;
+    const $ = (id) => document.getElementById(id);
+
+    let startedAt = Date.now();
+    let targetLabel = "";
+    const pad = (n) => String(n).padStart(2, "0");
+    function tick() {
+      const s = Math.floor((Date.now() - startedAt) / 1000);
+      const h = Math.floor(s / 3600);
+      $("elapsed").textContent = (h ? pad(h) + ":" : "") + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60);
+    }
+
+    invoke("recording_status").then((s) => {
+      if (!s.active) return;
+      startedAt = s.started_at_ms;
+      targetLabel = s.target;
+      $("target").textContent = targetLabel;
+      tick();
+    });
+    setInterval(tick, 1000);
+
+    let errorTimer;
+    listen("recording-error", (e) => {
+      $("target").textContent = String(e.payload);
+      $("target").classList.add("error");
+      clearTimeout(errorTimer);
+      errorTimer = setTimeout(() => {
+        $("target").textContent = targetLabel;
+        $("target").classList.remove("error");
+      }, 6000);
+    });
+
+    $("stop").onclick = () => {
+      $("stop").disabled = true;
+      $("stop").textContent = "Guardando…";
+      invoke("stop_recording");
+    };
+  </script>
+</body>
+</html>

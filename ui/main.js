@@ -110,6 +110,88 @@ $("btn-full").onclick = () => startCapture("full");
 $("btn-region").onclick = () => startCapture("region");
 $("btn-scroll-v").onclick = () => startCapture("scroll-down");
 $("btn-scroll-h").onclick = () => startCapture("scroll-right");
+$("btn-window").onclick = () => safe(() => invoke("open_target_picker", { purpose: "capture" }));
+
+// ---------- Sesiones ----------
+// Durante una sesión el atajo global captura el objetivo fijo al instante.
+let sessionActive = false;
+function setSessionState(active) {
+  sessionActive = active;
+  const btn = $("btn-session");
+  btn.classList.toggle("active", active);
+  btn.querySelector("span").textContent = active ? "Terminar sesión" : "Sesión";
+}
+$("btn-session").onclick = () => safe(() =>
+  sessionActive ? invoke("end_session") : invoke("open_target_picker", { purpose: "session" }));
+listen("session-state", (e) => setSessionState(e.payload.active));
+invoke("session_status").then((s) => setSessionState(s.active)).catch(() => {});
+
+// ---------- Grabación de vídeo ----------
+let recordingActive = false;
+function setRecordingState(s) {
+  recordingActive = s.active;
+  const btn = $("btn-record");
+  btn.hidden = !s.supported;
+  btn.classList.toggle("active", s.active);
+  btn.querySelector("span").textContent = s.active ? "Detener" : "Grabar";
+}
+$("btn-record").onclick = () => safe(() =>
+  recordingActive ? invoke("stop_recording") : invoke("open_target_picker", { purpose: "record" }));
+listen("recording-state", (e) => setRecordingState(e.payload));
+invoke("recording_status").then(setRecordingState).catch(() => {});
+
+let noticeTimer;
+function notice(text, action, onAction) {
+  $("notice-text").textContent = text;
+  $("notice-action").textContent = action;
+  $("notice-action").onclick = () => { $("notice").classList.add("hidden"); onAction(); };
+  $("notice").classList.remove("hidden");
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => $("notice").classList.add("hidden"), 8000);
+}
+listen("recording-saved", (e) => {
+  const { path, duration_ms } = e.payload;
+  notice(`Vídeo guardado (${fmtDuration(duration_ms)})`, "Mostrar en carpeta",
+    () => safe(() => invoke("reveal_recording", { path })));
+});
+
+const sessionsOverlay = $("sessions-overlay");
+function fmtDuration(ms) {
+  const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60;
+  return h ? `${h} h ${m} min` : m ? `${m} min` : `${s % 60} s`;
+}
+async function openSessions() {
+  const list = $("sessions-list");
+  list.innerHTML = "";
+  const sessions = await invoke("list_sessions");
+  if (!sessions.length) {
+    list.innerHTML = `<p class="sessions-empty">Todavía no hay sesiones. Pulsa <b>Sesión</b>, elige qué fijar y usa el atajo de captura durante la sesión.</p>`;
+  }
+  for (const s of sessions) {
+    const item = document.createElement("button");
+    item.className = "session-item";
+    item.innerHTML = "<b></b><small></small>";
+    item.querySelector("b").textContent = new Date(s.started_at_ms).toLocaleString("es", { dateStyle: "medium", timeStyle: "short" });
+    const parts = [fmtDuration(s.duration_ms), s.images + (s.images === 1 ? " captura" : " capturas"), s.target];
+    if (s.status === "recording") parts.push("en curso");
+    if (s.status === "interrupted") parts.push("interrumpida");
+    if (s.transcript === "running") parts.push("transcribiendo…");
+    if (s.transcript === "no_model" || s.transcript === "failed") parts.push("sin transcribir");
+    item.querySelector("small").textContent = parts.join(" · ");
+    item.onclick = () => {
+      sessionsOverlay.classList.add("hidden");
+      safe(() => invoke("open_session_viewer", { id: s.id }));
+    };
+    list.appendChild(item);
+  }
+  sessionsOverlay.classList.remove("hidden");
+}
+$("btn-sessions").onclick = () => safe(openSessions);
+$("sessions-close").onclick = () => sessionsOverlay.classList.add("hidden");
+sessionsOverlay.addEventListener("mousedown", (e) => { if (e.target === sessionsOverlay) sessionsOverlay.classList.add("hidden"); });
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") sessionsOverlay.classList.add("hidden");
+});
 
 // ---------- Barra de anotación ----------
 const tools = document.querySelectorAll("#tools .tool");

@@ -1,6 +1,12 @@
 //! Transcripción local con whisper.cpp. El audio nunca sale del equipo: solo
 //! se descargan los pesos del modelo.
 
+pub mod catalog;
+pub mod chunker;
+mod whisper;
+
+pub use whisper::{transcribe, try_unload, unload};
+
 use serde::Serialize;
 
 #[derive(Serialize, Clone)]

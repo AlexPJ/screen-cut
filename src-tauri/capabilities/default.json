@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Permisos para las ventanas principal y de selección",
-  "windows": ["main", "overlay", "scrollctl"],
+  "windows": ["main", "overlay", "scrollctl", "picker", "sessionctl", "viewer", "recctl"],
   "permissions": [
     "core:default",
     "dialog:default",

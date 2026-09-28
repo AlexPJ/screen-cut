@@ -1,6 +1,6 @@
 [package]
 name = "screen-cut"
-version = "0.2.0"
+version = "0.3.0"
 description = "Ligera herramienta de capturas con OCR y captura con scroll"
 edition = "2021"
 
@@ -11,6 +11,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = ["tray-icon", "image-png", "macos-private-api"] }
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-autostart = "2"
@@ -21,6 +22,11 @@ base64 = "0.22"
 dirs = "5"
 # Audio (micrófono y, en Windows/Linux, audio del sistema) para sesiones y vídeo.
 cpal = "0.18"
+# Descarga de los modelos de Whisper: la misma versión de reqwest y rustls que
+# ya trae el updater, así que no añade peso.
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+sha2 = "0.10"
 
 [target.'cfg(windows)'.dependencies.windows]
 version = "0.58"
@@ -39,6 +45,9 @@ features = [
   "Globalization",
   "Security_Cryptography",
   "Win32_System_SystemInformation",
+  "Win32_System_Threading",
+  "Win32_Graphics_Dwm",
+  "Win32_Storage_Xps",
 ]
 
 # Transcripción local con whisper.cpp. En Apple Silicon usa la GPU (Metal); en
@@ -67,6 +76,13 @@ objc2-app-kit = { version = "0.3", features = ["NSWindow", "NSGraphics", "NSResp
 objc2-core-foundation = "0.3"
 objc2-core-graphics = "0.3"
 objc2-vision = "0.3"
+# Grabación de vídeo: ScreenCaptureKit (pantalla, ventana y audio) + AVAssetWriter (MP4).
+objc2-screen-capture-kit = "0.3"
+objc2-av-foundation = { version = "0.3", features = ["objc2-core-media"] }
+objc2-core-media = "0.3"
+objc2-core-video = "0.3"
+block2 = "0.6"
+dispatch2 = "0.3"
 
 # xcap 0.5+ también enlaza PipeWire (para grabar vídeo, que no usamos), cuyas
 # bindings no compilan con las cabeceras de Ubuntu 22.04. La 0.4 captura igual.
@@ -81,6 +97,9 @@ cpal = { version = "0.18", features = ["pulseaudio"] }
 gstreamer = "0.25"
 gstreamer-app = "0.25"
 gstreamer-video = "0.25"
+# Wayland: el portal ScreenCast da acceso a la pantalla (con permiso del usuario) vía PipeWire.
+ashpd = { version = "0.13", default-features = false, features = ["tokio", "screencast"] }
+tokio = { version = "1", default-features = false, features = ["rt", "sync"] }
 
 [profile.release]
 opt-level = "z"

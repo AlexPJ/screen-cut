@@ -79,7 +79,9 @@ jobs:
 
             **macOS (Apple Silicon and Intel):** download `ScreenCut_*_universal.dmg`, open it and drag ScreenCut to Applications. The app is not notarised, so the first time macOS blocks it: open **System Settings → Privacy & Security** and click **Open Anyway**.
 
-            **Linux:** `.deb` (Debian/Ubuntu), `.rpm` (Fedora/openSUSE) or the portable `.AppImage`.
+            **Linux:** `.deb` (Debian/Ubuntu), `.rpm` (Fedora/openSUSE) or the portable `.AppImage`. Screen recording uses GStreamer; the `.deb`/`.rpm` install the plugins it needs.
+
+            Requires macOS 13 or later. See [CHANGELOG.md](https://github.com/AlexPJ/screen-cut/blob/main/CHANGELOG.md) for what's new.
 
             Already installed? The app updates itself: **Settings -> About -> Check for updates** (on Linux, only the AppImage updates itself).
           releaseDraft: false

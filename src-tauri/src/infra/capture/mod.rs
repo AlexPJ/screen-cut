@@ -2,21 +2,23 @@
 //! en macOS y Linux, xcap sobre el monitor que hay bajo el cursor.
 
 #[cfg(windows)]
-mod windows;
+pub(crate) mod windows;
 #[cfg(windows)]
-pub use self::windows::{capture_rect, capture_screen};
+pub use self::windows::{capture_monitor, capture_rect, capture_screen, list_screens};
 
 #[cfg(not(windows))]
-mod portable;
+pub(crate) mod portable;
 #[cfg(not(windows))]
-pub use self::portable::{capture_rect, capture_screen};
+pub use self::portable::{capture_monitor, capture_rect, capture_screen, list_screens};
+
+use serde::{Deserialize, Serialize};
 
 /// Zona de pantalla que cubre el overlay de selección.
 ///
 /// `x/y/width/height` van en el sistema de coordenadas de ventanas del SO:
 /// píxeles físicos en Windows y Linux, puntos en macOS. `scale` pasa de esas
 /// unidades a píxeles de la imagen capturada (1.0 salvo en pantallas Retina).
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Screen {
     /// Identificador del monitor (sin uso en Windows: se captura el escritorio virtual).
     #[cfg_attr(windows, allow(dead_code))]
@@ -26,6 +28,15 @@ pub struct Screen {
     pub width: i32,
     pub height: i32,
     pub scale: f64,
+}
+
+/// Un monitor para el selector de objetivo.
+#[derive(Clone, Serialize)]
+pub struct ScreenInfo {
+    pub screen: Screen,
+    /// Nombre que da el sistema (puede venir vacío).
+    pub name: String,
+    pub primary: bool,
 }
 
 impl Screen {

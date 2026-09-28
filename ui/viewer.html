@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sesión de ScreenCut</title>
+  <link rel="stylesheet" href="viewer.css" />
+</head>
+<body>
+  <header class="v-head">
+    <div class="v-title">
+      <h1 id="v-title">Sesión</h1>
+      <div id="v-meta" class="v-meta"></div>
+    </div>
+    <label class="v-max" title="Cuánto tiempo sigue valiendo cada imagen como máximo">
+      Cada imagen dura
+      <select id="v-max">
+        <option value="">hasta la siguiente</option>
+        <option value="60">1 min como máximo</option>
+        <option value="120">2 min como máximo</option>
+        <option value="300">5 min como máximo</option>
+        <option value="600">10 min como máximo</option>
+        <option value="1800">30 min como máximo</option>
+      </select>
+    </label>
+    <button id="v-reveal" class="v-btn" hidden>Mostrar en carpeta</button>
+  </header>
+
+  <div class="v-body">
+    <section class="v-main">
+      <div class="v-stage">
+        <img id="v-img" alt="" />
+        <p id="v-empty" class="v-empty" hidden></p>
+        <button id="v-prev" class="v-nav v-prev" title="Anterior (←)">‹</button>
+        <button id="v-next" class="v-nav v-next" title="Siguiente (→)">›</button>
+      </div>
+      <div class="v-caption">
+        <span id="v-cap" class="v-cap"></span>
+        <span class="v-range">
+          Visible de <input id="v-start" size="8" spellcheck="false" />
+          a <input id="v-end" size="8" spellcheck="false" />
+          <button id="v-reset" class="v-btn v-btn-small" title="Volver a los tiempos automáticos">Restablecer</button>
+        </span>
+      </div>
+      <div id="v-timeline" class="v-timeline" title="Cada bloque es el tiempo en que vale una imagen"></div>
+      <div id="v-strip" class="v-strip"></div>
+    </section>
+
+    <div id="v-resizer" class="v-resizer" title="Arrastra para cambiar el ancho"></div>
+
+    <aside class="v-side">
+      <div class="v-side-head">
+        <h2>Transcripción</h2>
+        <span id="v-tstatus" class="v-tstatus"></span>
+      </div>
+      <div id="v-tactions" class="v-tactions" hidden>
+        <select id="v-lang" title="Idioma de la transcripción"></select>
+        <button id="v-transcribe" class="v-btn v-btn-small">Transcribir</button>
+      </div>
+      <div id="v-transcript" class="v-transcript"></div>
+    </aside>
+  </div>
+  <p id="v-readonly" class="v-note" hidden>Solo lectura. Abre la sesión en ScreenCut para editar los tiempos de las imágenes.</p>
+
+  <script src="languages.js"></script>
+  <script src="timeline.js"></script>
+  <script src="viewer.js"></script>
+</body>
+</html>

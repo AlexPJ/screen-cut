@@ -94,7 +94,7 @@ fn to_info(img: &RawImage) -> Result<CaptureInfo, String> {
 
 /// Guarda la captura en el estado, la copia al portapapeles y la autoguarda
 /// en disco (ambos "best-effort": si fallan, no impiden mostrar la captura).
-fn store_and_notify(app: &AppHandle, img: RawImage) -> Result<CaptureInfo, String> {
+pub(crate) fn store_and_notify(app: &AppHandle, img: RawImage) -> Result<CaptureInfo, String> {
     let mut info = to_info(&img)?;
 
     let _ = clipboard::copy_image(&img);
@@ -242,6 +242,15 @@ fn finish_region_selection_inner(
         *screen
     };
     close_overlay(app);
+
+    if mode == "target-session" {
+        let target = crate::app::target::CaptureTarget::Region { screen, x, y, width, height };
+        return crate::app::session::start(app, target);
+    }
+    if mode == "target-record" {
+        let target = crate::app::target::CaptureTarget::Region { screen, x, y, width, height };
+        return crate::app::recording::start(app, target);
+    }
 
     if mode == "region" {
         let img = {
@@ -429,6 +438,62 @@ pub fn set_screenshots_dir(app: AppHandle, state: State<AppState>, path: String)
     let mut settings = state.settings.lock().unwrap();
     settings.screenshots_dir = dir;
     settings.save(&app)
+}
+
+// --- Sesiones, transcripción y grabación (Ajustes) ---
+
+/// Ajustes que esas secciones pueden leer y cambiar (el modelo va aparte, con
+/// `set_whisper_model`).
+const SESSION_KEYS: &[&str] = &[
+    "transcription_language",
+    "remember_language",
+    "transcribe_live",
+    "max_image_secs",
+    "session_mic",
+    "session_system_audio",
+    "keep_session_audio",
+    "sessions_dir",
+    "rec_system_audio",
+    "rec_mic",
+];
+
+fn session_settings_json(settings: &Settings) -> serde_json::Value {
+    let mut out = serde_json::Map::new();
+    if let Ok(serde_json::Value::Object(all)) = serde_json::to_value(settings) {
+        out.extend(all.into_iter().filter(|(k, _)| SESSION_KEYS.contains(&k.as_str())));
+    }
+    out.insert("sessions_dir_effective".into(), settings.sessions_dir().to_string_lossy().into());
+    serde_json::Value::Object(out)
+}
+
+#[tauri::command]
+pub fn get_session_settings(state: State<AppState>) -> serde_json::Value {
+    session_settings_json(&state.settings.lock().unwrap())
+}
+
+/// Cambia algunos de esos ajustes (`sessions_dir: null` vuelve a la carpeta por
+/// defecto) y devuelve cómo quedan.
+#[tauri::command]
+pub fn update_session_settings(
+    app: AppHandle,
+    state: State<AppState>,
+    patch: serde_json::Map<String, serde_json::Value>,
+) -> Result<serde_json::Value, String> {
+    let mut settings = state.settings.lock().unwrap();
+    let mut all = serde_json::to_value(&*settings).map_err(|e| e.to_string())?;
+    for (key, value) in patch {
+        if !SESSION_KEYS.contains(&key.as_str()) {
+            return Err(format!("Ajuste desconocido: {key}"));
+        }
+        all[key] = value;
+    }
+    let updated: Settings = serde_json::from_value(all).map_err(|e| format!("Ajuste no válido: {e}"))?;
+    if let Some(dir) = &updated.sessions_dir {
+        crate::app::settings::ensure_dir(dir)?;
+    }
+    *settings = updated;
+    settings.save(&app)?;
+    Ok(session_settings_json(&settings))
 }
 
 // --- Transcripción ---

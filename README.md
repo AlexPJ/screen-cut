@@ -2,13 +2,13 @@
 
 # ✂️ ScreenCut
 
-### A tiny, fast screenshot tool for Windows, macOS and Linux — with OCR, scrolling capture and annotations
+### A tiny, fast screenshot tool for Windows, macOS and Linux — with OCR, scrolling capture, annotations, screen recording and transcribed sessions
 
 [![Release](https://img.shields.io/github/v/release/AlexPJ/screen-cut?style=for-the-badge&color=d97757)](https://github.com/AlexPJ/screen-cut/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/AlexPJ/screen-cut/total?style=for-the-badge&color=d97757)](https://github.com/AlexPJ/screen-cut/releases)
 [![License](https://img.shields.io/github/license/AlexPJ/screen-cut?style=for-the-badge&color=d97757)](LICENSE)
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white)](#)
-[![macOS](https://img.shields.io/badge/macOS-11%2B-000?style=for-the-badge&logo=apple&logoColor=white)](#)
+[![macOS](https://img.shields.io/badge/macOS-13%2B-000?style=for-the-badge&logo=apple&logoColor=white)](#)
 [![Linux](https://img.shields.io/badge/Linux-deb%20%7C%20rpm%20%7C%20AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black)](#)
 [![Rust + Tauri](https://img.shields.io/badge/Rust%20%2B%20Tauri-2-000?style=for-the-badge&logo=tauri&logoColor=white)](#)
 
@@ -34,6 +34,8 @@ ScreenCut does what the Windows Snipping Tool does, but **faster and with superp
 - 🔔 **Lives in the system tray / menu bar** — always ready, with an optional launch-at-login setting.
 - 🌗 **Light/dark theme**, remembered between sessions.
 - 🔄 **Signed automatic updates** built into the app.
+- 🎬 **Screen recording** — record a screen, a region or a window to MP4 (H.264 + AAC) with system audio and your microphone mixed into one track. Uses each OS's native capture and encoders (ScreenCaptureKit + AVFoundation, Windows.Graphics.Capture + Media Foundation, GStreamer), so no ffmpeg is bundled. The floating stop control never shows up in the video on macOS and Windows.
+- 🗂️ **Sessions with local transcription** — pin a screen, region or window for a whole video call and grab it instantly with the shortcut, no overlay. The session records your mic ("Tú") and the call audio ("Otros") on separate tracks and transcribes them **on your computer** with [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (99 languages, auto-detect or pick one). You get a viewer with the image on the left and the clickable transcript on the right, plus a standalone `index.html` and `.txt`/`.srt`/`.md` exports. See [Sessions and privacy](#-sessions-and-privacy).
 - 💾 **Every capture is copied to the clipboard and saved to disk automatically** — no extra click. The destination folder defaults to `Screenshots` inside your OS Pictures folder and is configurable in Settings. You can still **copy** or **save as PNG** the edited/annotated version manually from the bottom bar.
 
 ## 📸 Screenshots
@@ -98,9 +100,9 @@ Everything is on the **[releases page](https://github.com/AlexPJ/screen-cut/rele
 
 1. Download `ScreenCut_x.y.z_universal.dmg` (one build for Apple Silicon and Intel), open it and drag **ScreenCut** to **Applications**.
 2. The app is not notarised by Apple, so the first launch is blocked. Go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
-3. On the first capture macOS asks for **Screen & System Audio Recording** permission. Grant it and reopen the app. Scrolling capture also needs **Accessibility** permission, because it simulates the mouse wheel.
+3. On the first capture macOS asks for **Screen & System Audio Recording** permission. Grant it and reopen the app. Scrolling capture also needs **Accessibility** permission, because it simulates the mouse wheel. Sessions and recordings with the microphone ask for **Microphone** permission.
 
-> Requirements: macOS 11 Big Sur or later. Because the app is not signed with a Developer ID, macOS may ask for these permissions again after an update.
+> Requirements: macOS 13 Ventura or later. Recording the microphone into videos needs macOS 15; sessions record it on any supported version. Because the app is not signed with a Developer ID, macOS may ask for these permissions again after an update.
 
 ### Linux
 
@@ -110,9 +112,11 @@ Everything is on the **[releases page](https://github.com/AlexPJ/screen-cut/rele
 | Fedora, openSUSE… | `ScreenCut-x.y.z-1.x86_64.rpm` | `sudo dnf install ./ScreenCut-x.y.z-1.x86_64.rpm` |
 | Any | `ScreenCut_x.y.z_amd64.AppImage` | `chmod +x` it and run it |
 
-The `.deb` and `.rpm` pull in Tesseract for OCR. With the AppImage, install it yourself (`sudo apt install tesseract-ocr tesseract-ocr-spa`).
+The `.deb` and `.rpm` pull in Tesseract for OCR and the GStreamer plugins used for screen recording. With the AppImage, install them yourself (`sudo apt install tesseract-ocr tesseract-ocr-spa gstreamer1.0-plugins-good gstreamer1.0-pulseaudio gstreamer1.0-pipewire`).
 
-> Works best on an **X11** session. On **Wayland**, screenshots go through the desktop portal, but the global shortcut, the region overlay placement and scrolling capture are limited by what the compositor allows other apps to do.
+Recordings are MP4 when the H.264 and AAC encoders are installed (`gstreamer1.0-plugins-ugly` and `gstreamer1.0-libav` on Debian/Ubuntu, `gstreamer1-plugin-openh264` and `gstreamer1-plugin-libav` on Fedora). Otherwise they are saved as WebM (VP8 + Opus), which only needs the base and good plugins.
+
+> Works best on an **X11** session. On **Wayland**, screenshots and recordings go through the desktop portal (the system asks you to pick the screen or window each time), and the global shortcut, the region overlay placement and scrolling capture are limited by what the compositor allows other apps to do. During a session on Wayland, use the **Capturar** button or the tray menu instead of the shortcut.
 
 Once installed, the app updates itself: **Settings → About → Check for updates**. On Linux this only works for the AppImage; update the `.deb`/`.rpm` by installing the new file.
 
@@ -127,6 +131,8 @@ Once installed, the app updates itself: **Settings → About → Check for updat
 | Annotate | Top toolbar (arrow, rectangle, text…) |
 | Crop | The **crop** ⌏ tool |
 | Save / copy | **Save** (PNG) or **Copy** (clipboard) |
+| Record video | **Grabar** → pick a screen, region or window → **Detener** in the floating control. Videos go to `Grabaciones` inside your captures folder |
+| Session | **Sesión** → pick the language and what to capture → `Ctrl+Shift+X` / `⇧⌘X` grabs it instantly → **Terminar** opens the viewer |
 
 ## ⌨️ Make it your default screenshot tool
 
@@ -168,6 +174,10 @@ src-tauri/src/
   core/     Domain types (RawImage, OcrResult…) — no platform dependencies
   infra/    Platform adapters:
             capture   GDI on Windows, xcap on macOS/Linux
+            window    window listing/capture (xcap, Windows.Graphics.Capture)
+            audio     mic + system audio (cpal, ScreenCaptureKit), WAV tracks, mixer
+            record    video: ScreenCaptureKit/AVAssetWriter, WGC/Media Foundation, GStreamer
+            stt       whisper.cpp transcription, model catalogue, silence chunker
             input     mouse wheel for scrolling capture (SendInput, CGEvent, XTEST)
             clipboard Win32 on Windows, arboard on macOS/Linux
             ocr       Tesseract + pre-processing; Windows.Media.Ocr / Vision fallback
@@ -175,6 +185,16 @@ src-tauri/src/
   app/      State and Tauri commands (orchestration)
 ui/         Static frontend (no Node, no bundler): layered HTML/CSS/JS
 ```
+
+## 🗂️ Sessions and privacy
+
+Sessions were designed for calls where the content is sensitive (for example, patient data), so **nothing leaves your computer**:
+
+- Transcription runs locally with whisper.cpp; the audio is never uploaded. The only network access is the one-time model download from Hugging Face (checked against a SHA-256). If your network blocks it, use **Settings → Sesiones y transcripción → Importar modelo…** with a file downloaded elsewhere.
+- Models: **Preciso** (large-v3-turbo, 574 MB, the best choice on Apple Silicon), **Equilibrado** (medium, 539 MB), **Rápido** (small, 190 MB, recommended on PCs without a GPU) and **Mínimo** (base, 60 MB).
+- Each session is a folder under `Sesiones` (configurable): `images/`, `audio/mic.wav` and `audio/system.wav`, `session.json`, `index.html` and the transcript exports. Files are **not encrypted**, so keep the folder somewhere you trust and avoid synced folders (iCloud, OneDrive…) if that matters to you. Turn off **Conservar el audio** to delete the recordings once they are transcribed and keep only the text.
+- Speakers are "Tú" (your microphone) and "Otros" (the computer's audio). Use headphones if you can: with speakers, your mic picks up the call and ScreenCut has to drop the echoed lines.
+- Live transcription can be turned off to spare the CPU during the call; the session is then transcribed when it ends. If the app closes unexpectedly, the session is recovered and can be transcribed from the viewer.
 
 ## 🔤 OCR
 
