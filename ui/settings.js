@@ -105,6 +105,12 @@
       row.innerHTML = `<input type="radio" name="model" /><span class="model-info"><b></b><small></small></span><span class="model-state"></span>`;
       row.querySelector("input").checked = m.selected;
       row.querySelector("b").textContent = `${m.label} · ${mb(m.size)}`;
+      if (m.recommended) {
+        const badge = document.createElement("span");
+        badge.className = "model-badge";
+        badge.textContent = "Recomendado para este equipo";
+        row.querySelector("b").append(" ", badge);
+      }
       row.querySelector("small").textContent = m.description;
       const state = row.querySelector(".model-state");
       const action = document.createElement("button");

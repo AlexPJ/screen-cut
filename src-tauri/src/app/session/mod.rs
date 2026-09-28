@@ -535,7 +535,7 @@ pub fn session_setup(app: AppHandle) -> SessionSetup {
         language,
         remember,
         model: crate::app::models::for_transcription(&app).map(|(spec, ..)| spec.label),
-        wanted: *catalog::find(&wanted).unwrap_or(&catalog::MODELS[0]),
+        wanted: *catalog::find(&wanted).unwrap_or(catalog::recommended()),
         records_audio,
     }
 }

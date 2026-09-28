@@ -56,6 +56,8 @@ pub struct ModelEntry {
     installed: bool,
     downloading: bool,
     selected: bool,
+    /// El que mejor va en este equipo (con o sin GPU).
+    recommended: bool,
 }
 
 #[tauri::command]
@@ -70,6 +72,7 @@ pub fn list_models(app: AppHandle) -> Vec<ModelEntry> {
             installed: installed(&app, m).is_some(),
             downloading: busy.contains(&m.id),
             selected: m.id == chosen,
+            recommended: m.id == catalog::recommended().id,
         })
         .collect()
 }

@@ -385,6 +385,10 @@ kbd {
 .model-info small { color: var(--text-dim); font-size: 12px; line-height: 1.4; }
 .model-state { color: var(--text-dim); font-size: 12px; white-space: nowrap; }
 .model-row progress { width: 90px; }
+.model-badge {
+  display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 600; vertical-align: 1px;
+}
 
 /* Acerca de */
 .about { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }

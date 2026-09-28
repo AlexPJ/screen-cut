@@ -19,12 +19,20 @@ pub struct ModelSpec {
 
 const WHISPER: &str = "ggerganov/whisper.cpp";
 
+/// Apple Silicon transcribe con la GPU (Metal); el resto, solo con la CPU.
+const GPU: bool = cfg!(all(target_os = "macos", target_arch = "aarch64"));
+
 /// Modelos de Whisper, del más preciso al más ligero. Todos son multilingües.
 pub const MODELS: &[ModelSpec] = &[
     ModelSpec {
         id: "large-v3-turbo-q5_0",
         label: "Preciso",
-        description: "Large v3 Turbo. La mejor calidad; ideal con GPU (Apple Silicon).",
+        description: if GPU {
+            "Large v3 Turbo. La mejor calidad, y en Apple Silicon va sobrado gracias a la GPU."
+        } else {
+            "Large v3 Turbo. La mejor calidad, pero sin GPU es lento: mejor con la transcripción en directo \
+             desactivada, para que se transcriba al terminar."
+        },
         file: "ggml-large-v3-turbo-q5_0.bin",
         size: 574_041_195,
         sha256: "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
@@ -71,6 +79,12 @@ pub const VAD: ModelSpec = ModelSpec {
     repo: "ggml-org/whisper-vad",
 };
 
+/// El modelo que mejor encaja con este equipo: el grande con GPU; sin ella, el
+/// rápido, para no competir por la CPU con la videollamada.
+pub fn recommended() -> &'static ModelSpec {
+    if GPU { &MODELS[0] } else { &MODELS[2] }
+}
+
 pub fn find(id: &str) -> Option<&'static ModelSpec> {
     MODELS.iter().chain(std::iter::once(&VAD)).find(|m| m.id == id)
 }
@@ -94,5 +108,11 @@ mod tests {
         }
         assert!(find("small-q5_1").is_some());
         assert!(find("../etc").is_none());
+    }
+
+    #[test]
+    fn recommends_large_with_gpu_and_small_without() {
+        let expected = if GPU { "large-v3-turbo-q5_0" } else { "small-q5_1" };
+        assert_eq!(recommended().id, expected);
     }
 }

@@ -96,14 +96,8 @@ impl Settings {
     }
 }
 
-/// Con GPU (Metal en Apple Silicon) el modelo grande va sobrado; en el resto
-/// se parte del rápido para no competir por la CPU con la videollamada.
 fn default_whisper_model() -> &'static str {
-    if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        "large-v3-turbo-q5_0"
-    } else {
-        "small-q5_1"
-    }
+    crate::infra::stt::catalog::recommended().id
 }
 
 pub fn ensure_dir(path: &Path) -> Result<(), String> {
