@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-09-28
 
 ### New
 - **Screen recording** of a screen, a region or a window to MP4 (H.264 + AAC), with system audio and the microphone mixed into one track.
