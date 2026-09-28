@@ -114,8 +114,11 @@ mod probe {
         };
         let (rec, warnings) = Recording::start(opts, |e| eprintln!("on_error: {e}")).unwrap();
         println!("avisos: {warnings:?}");
-        std::thread::sleep(std::time::Duration::from_secs(3));
+        let secs = std::env::var("SCREENCUT_SECS").ok().and_then(|s| s.parse().ok()).unwrap_or(3);
+        std::thread::sleep(std::time::Duration::from_secs(secs));
+        let t = std::time::Instant::now();
         rec.stop().unwrap();
+        println!("guardado en {:?}", t.elapsed());
     }
 }
 

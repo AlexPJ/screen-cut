@@ -1,7 +1,9 @@
 //! Grabación en macOS: ScreenCaptureKit entrega los fotogramas y el audio (del
 //! sistema y, desde macOS 15, del micrófono) y AVAssetWriter los codifica a
 //! MP4 por hardware. ScreenCut se excluye del filtro, así que sus ventanas
-//! (el control de grabación incluido) nunca salen en el vídeo.
+//! (el control de grabación incluido) nunca salen en el vídeo. El micrófono
+//! llega como otra pista de audio; al terminar se mezcla con la del sistema en
+//! una sola, porque muchos reproductores solo reproducen la primera.
 
 use super::{output_size, video_bitrate, Options, Source};
 use block2::RcBlock;
@@ -10,18 +12,19 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{define_class, msg_send, sel, AllocAnyThread, DefinedClass};
 use objc2_av_foundation::{
-    AVAssetWriter, AVAssetWriterInput, AVAssetWriterStatus, AVFileTypeMPEG4, AVMediaTypeAudio, AVMediaTypeVideo,
+    AVAssetReader, AVAssetReaderAudioMixOutput, AVAssetReaderStatus, AVAssetReaderTrackOutput, AVURLAsset, AVAssetWriter, AVAssetWriterInput, AVAssetWriterStatus, AVFileTypeMPEG4, AVMediaTypeAudio, AVMediaTypeVideo,
     AVVideoAverageBitRateKey, AVVideoCodecKey, AVVideoCodecTypeH264, AVVideoCompressionPropertiesKey,
     AVVideoExpectedSourceFrameRateKey, AVVideoHeightKey, AVVideoMaxKeyFrameIntervalKey, AVVideoProfileLevelH264HighAutoLevel,
     AVVideoProfileLevelKey, AVVideoWidthKey,
 };
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
-use objc2_core_media::{CMClock, CMSampleBuffer, CMTime};
+use objc2_core_media::{kCMTimeZero, CMClock, CMSampleBuffer, CMTime};
 use objc2_foundation::{NSCopying, NSDictionary, NSError, NSNumber, NSObject, NSObjectProtocol, NSString, NSURL};
 use objc2_screen_capture_kit::{
     SCContentFilter, SCShareableContent, SCStream, SCStreamConfiguration, SCStreamDelegate, SCStreamOutput,
     SCStreamOutputType,
 };
+use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -31,6 +34,8 @@ const FPS: i32 = 30;
 const BGRA: u32 = u32::from_be_bytes(*b"BGRA");
 /// `kAudioFormatMPEG4AAC`.
 const AAC: u32 = u32::from_be_bytes(*b"aac ");
+/// `kAudioFormatLinearPCM`.
+const LPCM: u32 = u32::from_be_bytes(*b"lpcm");
 
 /// Estado del escritor, compartido con los callbacks de ScreenCaptureKit (que
 /// llegan todos por la misma cola serie).
@@ -134,6 +139,7 @@ pub struct Recording {
     stream: Retained<SCStream>,
     output: Retained<StreamOutput>,
     _queue: DispatchRetained<DispatchQueue>,
+    path: PathBuf,
 }
 
 // SAFETY: SCStream es seguro entre hilos; el resto se usa a través de `Shared`.
@@ -207,7 +213,7 @@ fn key(k: Option<&'static NSString>) -> Result<&'static NSString, String> {
     k.ok_or_else(|| "AVFoundation no está disponible".to_string())
 }
 
-fn audio_input(channels: u32) -> Result<Retained<AVAssetWriterInput>, String> {
+fn audio_input(channels: u32, realtime: bool) -> Result<Retained<AVAssetWriterInput>, String> {
     // Las claves de AVAudioSettings.h valen lo mismo que su nombre.
     let settings = dict(&[
         (&NSString::from_str("AVFormatIDKey"), number(AAC as f64)),
@@ -218,7 +224,7 @@ fn audio_input(channels: u32) -> Result<Retained<AVAssetWriterInput>, String> {
     // SAFETY: tipo de medio y ajustes válidos.
     unsafe {
         let input = AVAssetWriterInput::assetWriterInputWithMediaType_outputSettings(key(AVMediaTypeAudio)?, Some(&settings));
-        input.setExpectsMediaDataInRealTime(true);
+        input.setExpectsMediaDataInRealTime(realtime);
         Ok(input)
     }
 }
@@ -289,9 +295,15 @@ impl Recording {
                 config.setChannelCount(2);
                 config.setExcludesCurrentProcessAudio(true);
             }
-            let microphone = opts.microphone && config.respondsToSelector(sel!(setCaptureMicrophone:));
+            let mut microphone = opts.microphone && config.respondsToSelector(sel!(setCaptureMicrophone:));
             if opts.microphone && !microphone {
                 warnings.push("Grabar el micrófono en los vídeos requiere macOS 15 o posterior".into());
+            }
+            if microphone {
+                if let Err(e) = crate::infra::audio::device::microphone_access() {
+                    warnings.push(e);
+                    microphone = false;
+                }
             }
             if microphone {
                 config.setCaptureMicrophone(true);
@@ -316,8 +328,8 @@ impl Recording {
             ]);
             let video = AVAssetWriterInput::assetWriterInputWithMediaType_outputSettings(key(AVMediaTypeVideo)?, Some(&video_settings));
             video.setExpectsMediaDataInRealTime(true);
-            let system = if opts.system_audio { Some(audio_input(2)?) } else { None };
-            let mic = if microphone { Some(audio_input(1)?) } else { None };
+            let system = if opts.system_audio { Some(audio_input(2, true)?) } else { None };
+            let mic = if microphone { Some(audio_input(1, true)?) } else { None };
             for input in std::iter::once(&video).chain(system.iter()).chain(mic.iter()) {
                 if !writer.canAddInput(input) {
                     return Err("El codificador de vídeo no admite esta configuración".into());
@@ -351,7 +363,7 @@ impl Recording {
             }
             wait_for(|block| stream.startCaptureWithCompletionHandler(Some(block)))
                 .map_err(|e| format!("No se pudo empezar a grabar: {e}"))?;
-            Ok((Self { stream, output, _queue: queue }, warnings))
+            Ok((Self { stream, output, _queue: queue, path: opts.path }, warnings))
         }
     }
 
@@ -361,7 +373,7 @@ impl Recording {
         unsafe {
             let _ = wait_for(|block| self.stream.stopCaptureWithCompletionHandler(Some(block)));
             let shared = self.output.ivars().clone();
-            let writer = {
+            let (writer, two_tracks) = {
                 let mut w = shared.writer.lock().unwrap_or_else(|e| e.into_inner());
                 w.stopped = true;
                 if !w.started {
@@ -374,19 +386,154 @@ impl Recording {
                 for input in std::iter::once(&w.video).chain(w.system.iter()).chain(w.mic.iter()) {
                     input.markAsFinished();
                 }
-                w.writer.clone()
+                (w.writer.clone(), w.system.is_some() && w.mic.is_some())
             };
-            let (tx, rx) = mpsc::channel();
-            let block = RcBlock::new(move || {
-                let _ = tx.send(());
-            });
-            writer.finishWritingWithCompletionHandler(&block);
-            rx.recv_timeout(Duration::from_secs(30)).map_err(|_| "No se pudo terminar de escribir el vídeo")?;
-            if writer.status() != AVAssetWriterStatus::Completed {
-                let error = writer.error().map(|e| e.localizedDescription().to_string()).unwrap_or_default();
-                return Err(format!("El vídeo no se guardó bien: {error}"));
+            finish(&writer)?;
+            if two_tracks {
+                // Si falla, se queda el vídeo con las dos pistas por separado.
+                if let Err(e) = mix_audio_tracks(&self.path) {
+                    eprintln!("grabación: no se pudo mezclar el micrófono: {e}");
+                }
             }
             Ok(())
         }
     }
+}
+
+/// Cierra el archivo y espera a que AVAssetWriter termine.
+unsafe fn finish(writer: &AVAssetWriter) -> Result<(), String> {
+    let (tx, rx) = mpsc::channel();
+    let block = RcBlock::new(move || {
+        let _ = tx.send(());
+    });
+    writer.finishWritingWithCompletionHandler(&block);
+    rx.recv_timeout(Duration::from_secs(60)).map_err(|_| "No se pudo terminar de escribir el vídeo")?;
+    if writer.status() != AVAssetWriterStatus::Completed {
+        let error = writer.error().map(|e| e.localizedDescription().to_string()).unwrap_or_default();
+        return Err(format!("El vídeo no se guardó bien: {error}"));
+    }
+    Ok(())
+}
+
+/// Reescribe el MP4 con todas sus pistas de audio mezcladas en una sola. El
+/// vídeo se copia tal cual (sin recodificar); solo se codifica el audio, así
+/// que tarda unos segundos incluso con grabaciones largas.
+fn mix_audio_tracks(path: &Path) -> Result<(), String> {
+    let tmp = path.with_extension("mezcla.mp4");
+    let _ = std::fs::remove_file(&tmp);
+    let result = unsafe { remux(path, &tmp) };
+    match result {
+        Ok(()) => std::fs::rename(&tmp, path).map_err(|e| e.to_string()),
+        Err(e) => {
+            let _ = std::fs::remove_file(&tmp);
+            Err(e)
+        }
+    }
+}
+
+// Las variantes síncronas están obsoletas, pero esto ya corre fuera del hilo
+// principal y así se lee mucho más simple.
+#[allow(deprecated)]
+unsafe fn remux(from: &Path, to: &Path) -> Result<(), String> {
+    let describe = |e: Retained<NSError>| e.localizedDescription().to_string();
+    let url = NSURL::from_file_path(from).ok_or("Ruta no válida")?;
+    let asset = AVURLAsset::URLAssetWithURL_options(&url, None);
+    let video_tracks = asset.tracksWithMediaType(key(AVMediaTypeVideo)?);
+    let audio_tracks = asset.tracksWithMediaType(key(AVMediaTypeAudio)?);
+    let video_track = video_tracks.firstObject().ok_or("El vídeo no tiene imagen")?;
+    if audio_tracks.count() < 2 {
+        return Ok(());
+    }
+
+    let reader = AVAssetReader::assetReaderWithAsset_error(&asset).map_err(describe)?;
+    let video_out = AVAssetReaderTrackOutput::assetReaderTrackOutputWithTrack_outputSettings(&video_track, None);
+    video_out.setAlwaysCopiesSampleData(false);
+    let pcm = dict(&[
+        (&NSString::from_str("AVFormatIDKey"), number(LPCM as f64)),
+        (&NSString::from_str("AVSampleRateKey"), number(48_000.0)),
+        (&NSString::from_str("AVNumberOfChannelsKey"), number(2.0)),
+        (&NSString::from_str("AVLinearPCMBitDepthKey"), number(16.0)),
+        (&NSString::from_str("AVLinearPCMIsFloatKey"), any(NSNumber::new_bool(false))),
+        (&NSString::from_str("AVLinearPCMIsBigEndianKey"), any(NSNumber::new_bool(false))),
+        (&NSString::from_str("AVLinearPCMIsNonInterleaved"), any(NSNumber::new_bool(false))),
+    ]);
+    let audio_out = AVAssetReaderAudioMixOutput::assetReaderAudioMixOutputWithAudioTracks_audioSettings(&audio_tracks, Some(&pcm));
+    for output in [&**video_out, &**audio_out] {
+        if !reader.canAddOutput(output) {
+            return Err("No se puede leer el vídeo".into());
+        }
+        reader.addOutput(output);
+    }
+    if !reader.startReading() {
+        return Err(reader.error().map(describe).unwrap_or_default());
+    }
+
+    // El formato del vídeo, necesario para copiarlo sin recodificar.
+    let formats = video_track.formatDescriptions();
+    let format = formats.firstObject().ok_or("El vídeo no tiene formato")?;
+    // SAFETY: los elementos de `formatDescriptions` son CMFormatDescription.
+    let hint = &*(Retained::as_ptr(&format) as *const objc2_core_media::CMFormatDescription);
+    let out_url = NSURL::from_file_path(to).ok_or("Ruta no válida")?;
+    let writer = AVAssetWriter::assetWriterWithURL_fileType_error(&out_url, key(AVFileTypeMPEG4)?).map_err(describe)?;
+    let video_in = AVAssetWriterInput::assetWriterInputWithMediaType_outputSettings_sourceFormatHint(
+        key(AVMediaTypeVideo)?,
+        None,
+        Some(hint),
+    );
+    video_in.setExpectsMediaDataInRealTime(false);
+    let audio_in = audio_input(2, false)?;
+    for input in [&video_in, &audio_in] {
+        if !writer.canAddInput(input) {
+            return Err("No se puede escribir el vídeo mezclado".into());
+        }
+        writer.addInput(input);
+    }
+    if !writer.startWriting() {
+        return Err(writer.error().map(describe).unwrap_or_default());
+    }
+    writer.startSessionAtSourceTime(kCMTimeZero);
+
+    // AVAssetWriter intercala las pistas: cada entrada acepta datos solo
+    // cuando la otra no se ha quedado atrás.
+    let (mut video_done, mut audio_done) = (false, false);
+    while !(video_done && audio_done) {
+        let mut progressed = false;
+        if !video_done && video_in.isReadyForMoreMediaData() {
+            match video_out.copyNextSampleBuffer() {
+                Some(sample) => {
+                    video_in.appendSampleBuffer(&sample);
+                }
+                None => {
+                    video_in.markAsFinished();
+                    video_done = true;
+                }
+            }
+            progressed = true;
+        }
+        if !audio_done && audio_in.isReadyForMoreMediaData() {
+            match audio_out.copyNextSampleBuffer() {
+                Some(sample) => {
+                    audio_in.appendSampleBuffer(&sample);
+                }
+                None => {
+                    audio_in.markAsFinished();
+                    audio_done = true;
+                }
+            }
+            progressed = true;
+        }
+        if writer.status() == AVAssetWriterStatus::Failed {
+            reader.cancelReading();
+            return Err(writer.error().map(describe).unwrap_or_default());
+        }
+        if !progressed {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+    }
+    if reader.status() == AVAssetReaderStatus::Failed {
+        writer.cancelWriting();
+        return Err(reader.error().map(describe).unwrap_or_default());
+    }
+    writer.endSessionAtSourceTime(asset.duration());
+    finish(&writer)
 }

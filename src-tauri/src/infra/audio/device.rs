@@ -47,6 +47,9 @@ impl Drop for AudioStream {
 
 /// Empieza a capturar `source`; `on_block` recibe los bloques desde el hilo de audio.
 pub fn start(source: Source, on_block: impl FnMut(PcmBlock) + Send + 'static) -> Result<AudioStream, String> {
+    if matches!(source, Source::Microphone) {
+        microphone_access()?;
+    }
     let (ready_tx, ready_rx) = mpsc::channel::<Result<(), String>>();
     let (stop_tx, stop_rx) = mpsc::channel::<()>();
     let thread = std::thread::spawn(move || {
@@ -93,6 +96,39 @@ fn open(source: Source, on_block: impl FnMut(PcmBlock) + Send + 'static) -> Resu
     .map_err(|e| describe(source, e))?;
     stream.play().map_err(|e| describe(source, e))?;
     Ok(stream)
+}
+
+/// macOS no da error al abrir el micrófono sin permiso: entrega silencio. Por
+/// eso se comprueba antes y, la primera vez, se pide (espera a la respuesta).
+#[cfg(target_os = "macos")]
+pub fn microphone_access() -> Result<(), String> {
+    use objc2_av_foundation::{AVAuthorizationStatus, AVCaptureDevice, AVMediaTypeAudio};
+    const DENIED: &str = "ScreenCut no tiene permiso para usar el micrófono. Actívalo en Ajustes del Sistema → \
+                          Privacidad y seguridad → Micrófono.";
+    // SAFETY: consultas de clase de AVFoundation con un tipo de medio válido.
+    unsafe {
+        let Some(audio) = AVMediaTypeAudio else { return Ok(()) };
+        match AVCaptureDevice::authorizationStatusForMediaType(audio) {
+            AVAuthorizationStatus::Authorized => Ok(()),
+            AVAuthorizationStatus::NotDetermined => {
+                let (tx, rx) = mpsc::channel();
+                let block = block2::RcBlock::new(move |granted: objc2::runtime::Bool| {
+                    let _ = tx.send(granted.as_bool());
+                });
+                AVCaptureDevice::requestAccessForMediaType_completionHandler(audio, &block);
+                match rx.recv_timeout(Duration::from_secs(120)) {
+                    Ok(true) => Ok(()),
+                    _ => Err(DENIED.into()),
+                }
+            }
+            _ => Err(DENIED.into()),
+        }
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn microphone_access() -> Result<(), String> {
+    Ok(())
 }
 
 fn describe(source: Source, e: cpal::Error) -> String {
