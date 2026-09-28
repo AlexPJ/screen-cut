@@ -53,6 +53,10 @@ fn main() {
             app::commands::get_default_screenshots_dir,
             app::commands::set_screenshots_dir,
             app::commands::get_transcription_info,
+            app::target::list_capture_sources,
+            app::target::source_thumbnail,
+            app::target::open_target_picker,
+            app::target::choose_target,
         ])
         .setup(|app| {
             // Atajo por defecto: Ctrl+Shift+X (siempre activo).

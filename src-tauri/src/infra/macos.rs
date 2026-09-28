@@ -35,6 +35,44 @@ pub fn raise_overlay(window: &tauri::WebviewWindow) {
     });
 }
 
+/// Ids de las ventanas normales de aplicación en pantalla (capa 0). Deja fuera
+/// el Dock, la barra de menús, los widgets y demás elementos del sistema, sin
+/// depender de sus nombres (que cambian con el idioma).
+pub fn app_window_ids() -> std::collections::HashSet<u32> {
+    use objc2_core_foundation::{CFDictionary, CFNumber, CFNumberType, CFString};
+    use objc2_core_graphics::{CGWindowListCopyWindowInfo, CGWindowListOption};
+    use std::ffi::c_void;
+
+    let number = |dict: &CFDictionary, key: &str| -> Option<i32> {
+        let key = CFString::from_str(key);
+        // SAFETY: la clave es un CFString válido y los valores de estas claves son CFNumber.
+        unsafe {
+            let value = dict.value((&*key as *const CFString).cast()) as *const CFNumber;
+            let mut out = 0i32;
+            (!value.is_null() && (*value).value(CFNumberType::IntType, &mut out as *mut i32 as *mut c_void))
+                .then_some(out)
+        }
+    };
+
+    let mut ids = std::collections::HashSet::new();
+    let Some(list) = CGWindowListCopyWindowInfo(
+        CGWindowListOption::OptionOnScreenOnly | CGWindowListOption::ExcludeDesktopElements,
+        0,
+    ) else {
+        return ids;
+    };
+    for i in 0..list.count() {
+        // SAFETY: cada elemento de la lista es un CFDictionary con la info de una ventana.
+        let dict = unsafe { &*(list.value_at_index(i) as *const CFDictionary) };
+        if number(dict, "kCGWindowLayer") == Some(0) {
+            if let Some(id) = number(dict, "kCGWindowNumber") {
+                ids.insert(id as u32);
+            }
+        }
+    }
+    ids
+}
+
 // ============================ OCR (Vision) ============================
 
 /// OCR con el framework Vision (el mismo que usa "Texto en vivo"). Viene con

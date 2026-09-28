@@ -94,7 +94,7 @@ fn to_info(img: &RawImage) -> Result<CaptureInfo, String> {
 
 /// Guarda la captura en el estado, la copia al portapapeles y la autoguarda
 /// en disco (ambos "best-effort": si fallan, no impiden mostrar la captura).
-fn store_and_notify(app: &AppHandle, img: RawImage) -> Result<CaptureInfo, String> {
+pub(crate) fn store_and_notify(app: &AppHandle, img: RawImage) -> Result<CaptureInfo, String> {
     let mut info = to_info(&img)?;
 
     let _ = clipboard::copy_image(&img);

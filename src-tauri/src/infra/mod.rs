@@ -7,3 +7,4 @@ pub mod ocr;
 pub mod png_io;
 pub mod scroll;
 pub mod stt;
+pub mod window;

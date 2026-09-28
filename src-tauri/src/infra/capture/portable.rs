@@ -1,9 +1,10 @@
 //! Captura de pantalla en macOS y Linux vía xcap, sobre un monitor concreto.
 //! En macOS usa CoreGraphics; en Linux, X11 (XCB) o el portal de Wayland.
 
-use super::Screen;
+use super::{Screen, ScreenInfo};
 use crate::core::types::RawImage;
 use crate::infra::input;
+use xcap::image::RgbaImage;
 use xcap::Monitor;
 
 /// Monitor bajo el cursor; si no se puede averiguar, el principal.
@@ -34,19 +35,24 @@ fn grab(monitor: &Monitor) -> Result<RawImage, String> {
     let img = monitor
         .capture_image()
         .map_err(|e| format!("No se pudo capturar la pantalla: {e}"))?;
+    Ok(from_rgba(img))
+}
+
+/// Convierte una imagen de xcap (RGBA) a nuestro formato (BGRA opaco).
+pub(crate) fn from_rgba(img: RgbaImage) -> RawImage {
     let (w, h) = img.dimensions();
     let mut bgra = img.into_raw();
     for px in bgra.chunks_exact_mut(4) {
         px.swap(0, 2); // RGBA -> BGRA
         px[3] = 255;
     }
-    Ok(RawImage::new(w, h, bgra))
+    RawImage::new(w, h, bgra)
 }
 
 /// macOS solo deja ver el fondo de escritorio (sin ventanas) a las apps sin
 /// permiso de Grabación de pantalla, así que lo pedimos antes de capturar.
 #[cfg(target_os = "macos")]
-fn ensure_permission() -> Result<(), String> {
+pub(crate) fn ensure_permission() -> Result<(), String> {
     use objc2_core_graphics::{CGPreflightScreenCaptureAccess, CGRequestScreenCaptureAccess};
     if CGPreflightScreenCaptureAccess() {
         return Ok(());
@@ -59,7 +65,7 @@ fn ensure_permission() -> Result<(), String> {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn ensure_permission() -> Result<(), String> {
+pub(crate) fn ensure_permission() -> Result<(), String> {
     Ok(())
 }
 
@@ -79,6 +85,33 @@ pub fn capture_screen() -> Result<(RawImage, Screen), String> {
         scale: img.width as f64 / width.max(1) as f64,
     };
     Ok((img, screen))
+}
+
+/// Todos los monitores, el principal primero.
+pub fn list_screens() -> Result<Vec<ScreenInfo>, String> {
+    let err = |e: xcap::XCapError| e.to_string();
+    let mut list = Vec::new();
+    for m in Monitor::all().map_err(|e| format!("No se pudieron listar los monitores: {e}"))? {
+        list.push(ScreenInfo {
+            screen: Screen {
+                id: m.id().map_err(err)?,
+                x: m.x().map_err(err)?,
+                y: m.y().map_err(err)?,
+                width: m.width().map_err(err)? as i32,
+                height: m.height().map_err(err)? as i32,
+                scale: m.scale_factor().map_err(err)? as f64,
+            },
+            name: m.name().unwrap_or_default(),
+            primary: m.is_primary().unwrap_or(false),
+        });
+    }
+    list.sort_by_key(|s| !s.primary);
+    Ok(list)
+}
+
+/// Captura un monitor entero.
+pub fn capture_monitor(screen: &Screen) -> Result<RawImage, String> {
+    grab(&monitor_by_id(screen.id)?)
 }
 
 /// Captura un rectángulo de `screen`, en píxeles relativos a su origen.

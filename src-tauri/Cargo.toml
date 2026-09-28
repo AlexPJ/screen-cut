@@ -39,6 +39,9 @@ features = [
   "Globalization",
   "Security_Cryptography",
   "Win32_System_SystemInformation",
+  "Win32_System_Threading",
+  "Win32_Graphics_Dwm",
+  "Win32_Storage_Xps",
 ]
 
 # Transcripción local con whisper.cpp. En Apple Silicon usa la GPU (Metal); en

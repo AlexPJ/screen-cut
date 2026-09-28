@@ -110,6 +110,10 @@ $("btn-full").onclick = () => startCapture("full");
 $("btn-region").onclick = () => startCapture("region");
 $("btn-scroll-v").onclick = () => startCapture("scroll-down");
 $("btn-scroll-h").onclick = () => startCapture("scroll-right");
+$("btn-window").onclick = () => {
+  localStorage.setItem("picker-purpose", "capture");
+  safe(() => invoke("open_target_picker"));
+};
 
 // ---------- Barra de anotación ----------
 const tools = document.querySelectorAll("#tools .tool");
