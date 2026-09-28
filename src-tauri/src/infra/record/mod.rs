@@ -45,8 +45,10 @@ pub struct Options {
 }
 
 /// Tamaño de salida en píxeles: pares (H.264 trabaja con bloques de 2×2) y
-/// sin pasar de 4K, el máximo que admiten los codificadores por hardware.
-#[cfg_attr(not(any(target_os = "macos", windows)), allow(dead_code))]
+/// sin pasar de 4K, el máximo que admiten los codificadores por hardware. En
+/// Windows no se usa: su codificador recorta en vez de escalar, así que allí
+/// se graba al tamaño nativo.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub fn output_size(width: f64, height: f64) -> (usize, usize) {
     let fit = (3840.0 / width).min(2160.0 / height).min(1.0);
     let even = |v: f64| ((v * fit).round() as usize & !1).max(2);
