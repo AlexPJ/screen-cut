@@ -17,6 +17,8 @@
       <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></symbol>
       <symbol id="i-region" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4"/><path d="M15 3h4a2 2 0 0 1 2 2v4"/><path d="M9 21H5a2 2 0 0 1-2-2v-4"/><path d="M15 21h4a2 2 0 0 0 2-2v-4"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></symbol>
       <symbol id="i-window" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><circle cx="6" cy="6.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="8.5" cy="6.5" r="0.6" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-session" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></symbol>
       <symbol id="i-display" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></symbol>
       <symbol id="i-scroll-v" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M8 7l4-4 4 4"/><path d="M8 17l4 4 4-4"/></symbol>
       <symbol id="i-scroll-h" viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M7 8l-4 4 4 4"/><path d="M17 8l4 4-4 4"/></symbol>
@@ -93,6 +95,10 @@
           <svg><use href="#i-scroll-h"/></svg><span>Scroll horizontal</span>
         </button>
         <span class="divider"></span>
+        <button id="btn-session" class="btn" title="Sesión: fija una región, ventana o pantalla y captúrala al instante con el atajo">
+          <svg><use href="#i-session"/></svg><span>Sesión</span>
+        </button>
+        <span class="divider"></span>
         <label class="timer-ctl" title="Retardo antes de capturar">
           <svg><use href="#i-timer"/></svg>
           <select id="timer-select">
@@ -103,6 +109,9 @@
           </select>
         </label>
         <span class="spacer"></span>
+        <button id="btn-sessions" class="btn btn-icon" title="Sesiones anteriores">
+          <svg><use href="#i-history"/></svg>
+        </button>
         <button id="btn-settings" class="btn btn-icon" title="Ajustes y Acerca de">
           <svg><use href="#i-settings"/></svg>
         </button>
@@ -209,6 +218,18 @@
     </div>
 
     <!-- Modal de Ajustes + Acerca de -->
+    <div id="sessions-overlay" class="modal-overlay hidden">
+      <div class="modal">
+        <header class="modal-head">
+          <h2>Sesiones</h2>
+          <button id="sessions-close" class="btn btn-icon" title="Cerrar"><svg><use href="#i-x"/></svg></button>
+        </header>
+        <div class="modal-body">
+          <div id="sessions-list" class="sessions-list"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="settings-overlay" class="modal-overlay hidden">
       <div class="modal">
         <header class="modal-head">

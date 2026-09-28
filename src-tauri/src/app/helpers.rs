@@ -97,7 +97,8 @@ pub fn show_main(app: &AppHandle) {
 }
 /// Crea una ventanita flotante sin bordes (controles de scroll, sesión o
 /// grabación) en `x, y` con tamaño `width × height`, en unidades del SO.
-/// Queda siempre encima, fuera de la barra de tareas y sin robar el foco.
+/// Queda siempre encima, fuera de la barra de tareas y sin robar el foco, y
+/// se excluye de las capturas de pantalla (para no salir en las de la sesión).
 pub fn open_floating_window(
     app: &AppHandle,
     label: &str,
@@ -113,6 +114,7 @@ pub fn open_floating_window(
         .always_on_top(true)
         .skip_taskbar(true)
         .focused(false)
+        .content_protected(true)
         .visible(false)
         .build()
         .map_err(|e| e.to_string())?;

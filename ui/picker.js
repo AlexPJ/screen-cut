@@ -1,9 +1,8 @@
-// Selector de objetivo: una ventana o un monitor. Qué se hace con lo elegido
-// (capturarlo ahora, fijarlo para una sesión…) lo decide "picker-purpose".
+// Selector de objetivo: una ventana o un monitor (o, para una sesión, una
+// región). Qué se hace con lo elegido lo decide el backend según el propósito
+// con el que se abrió: "capture" o "session".
 const { invoke } = window.__TAURI__.core;
 const appWindow = window.__TAURI__.window.getCurrentWindow();
-
-const purpose = localStorage.getItem("picker-purpose") || "capture";
 document.documentElement.dataset.theme = localStorage.getItem("theme") ||
   (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 
@@ -20,7 +19,7 @@ function card(title, sub, target) {
   el.querySelector(".card-sub").textContent = sub;
   el.title = title;
   el.dataset.target = JSON.stringify(target);
-  el.onclick = () => invoke("choose_target", { purpose, target }).catch(showError);
+  el.onclick = () => invoke("choose_target", { target }).catch(showError);
   return el;
 }
 
@@ -100,5 +99,16 @@ document.querySelectorAll(".tab").forEach((b) => {
 document.getElementById("btn-refresh").onclick = load;
 document.getElementById("btn-cancel").onclick = () => appWindow.close();
 addEventListener("keydown", (e) => { if (e.key === "Escape") appWindow.close(); });
+
+invoke("get_picker_purpose").then((purpose) => {
+  if (purpose !== "session") return;
+  document.getElementById("hint").hidden = false;
+  const region = document.getElementById("btn-region");
+  region.hidden = false;
+  region.onclick = () => {
+    localStorage.setItem("overlay-mode", "target-session");
+    invoke("choose_region_target").catch(showError);
+  };
+});
 
 load();

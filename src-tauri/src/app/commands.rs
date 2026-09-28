@@ -243,6 +243,11 @@ fn finish_region_selection_inner(
     };
     close_overlay(app);
 
+    if mode == "target-session" {
+        let target = crate::app::target::CaptureTarget::Region { screen, x, y, width, height };
+        return crate::app::session::start(app, target);
+    }
+
     if mode == "region" {
         let img = {
             let state: State<AppState> = app.state();

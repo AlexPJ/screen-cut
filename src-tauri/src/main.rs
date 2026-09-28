@@ -15,6 +15,7 @@ use tauri_plugin_global_shortcut::ShortcutState;
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
@@ -25,9 +26,10 @@ fn main() {
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, _shortcut, event| {
                     // Todos los atajos registrados (Ctrl+Shift+X y, si el usuario
-                    // lo activa, Impr Pant) disparan la captura de región.
+                    // lo activa, Impr Pant) disparan la captura: de región, o del
+                    // objetivo fijo si hay una sesión en curso.
                     if event.state == ShortcutState::Pressed {
-                        let _ = app::commands::open_region_overlay(app.clone());
+                        app::activity::on_hotkey(app);
                     }
                 })
                 .build(),
@@ -56,7 +58,18 @@ fn main() {
             app::target::list_capture_sources,
             app::target::source_thumbnail,
             app::target::open_target_picker,
+            app::target::get_picker_purpose,
             app::target::choose_target,
+            app::target::choose_region_target,
+            app::session::session_status,
+            app::session::capture_session_now,
+            app::session::end_session,
+            app::session::list_sessions,
+            app::session::open_session_viewer,
+            app::session::load_session,
+            app::session::session_file,
+            app::session::save_session_edits,
+            app::session::reveal_session,
         ])
         .setup(|app| {
             // Atajo por defecto: Ctrl+Shift+X (siempre activo).
@@ -67,16 +80,24 @@ fn main() {
                 let state: tauri::State<app::state::AppState> = app.state();
                 *state.settings.lock().unwrap() = app::settings::Settings::load(app.handle());
             }
+            app::session::recover(app.handle());
 
             // Icono de bandeja: mantiene la app viva para responder a Impr Pant.
             let capture_i =
                 MenuItem::with_id(app, "capture", "Capturar región", true, None::<&str>)?;
+            let session_i =
+                MenuItem::with_id(app, "session", "Iniciar sesión…", true, None::<&str>)?;
             let show_i = MenuItem::with_id(app, "show", "Mostrar ventana", true, None::<&str>)?;
             let quit_i = MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?;
             let menu = Menu::with_items(
                 app,
-                &[&capture_i, &show_i, &PredefinedMenuItem::separator(app)?, &quit_i],
+                &[&capture_i, &session_i, &show_i, &PredefinedMenuItem::separator(app)?, &quit_i],
             )?;
+            {
+                let state: tauri::State<app::state::AppState> = app.state();
+                *state.tray_capture_item.lock().unwrap() = Some(capture_i.clone());
+                *state.tray_session_item.lock().unwrap() = Some(session_i.clone());
+            }
 
             TrayIconBuilder::with_id("main-tray")
                 .icon(app.default_window_icon().unwrap().clone())
@@ -84,9 +105,8 @@ fn main() {
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
-                    "capture" => {
-                        let _ = app::commands::open_region_overlay(app.clone());
-                    }
+                    "capture" => app::activity::on_hotkey(app),
+                    "session" => app::session::toggle_from_tray(app),
                     "show" => show_main(app),
                     "quit" => app.exit(0),
                     _ => {}
