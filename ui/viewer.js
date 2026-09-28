@@ -55,6 +55,8 @@
       S.images.length + (S.images.length === 1 ? " captura" : " capturas"),
       targetLabel(S.target),
     ];
+    const audio = (S.audio || []).map((a) => SPEAKERS[a.speaker] || a.speaker);
+    if (audio.length) parts.push("audio: " + audio.join(" y "));
     if (S.status === "interrupted") parts.push("interrumpida");
     $("v-meta").textContent = parts.join(" · ");
     $("v-max").value = S.max_image_secs ? String(S.max_image_secs) : "";

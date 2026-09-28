@@ -34,6 +34,18 @@ pub struct Session {
     pub images: Vec<SessionImage>,
     #[serde(default)]
     pub segments: Vec<Segment>,
+    /// Pistas de audio grabadas (WAV de 16 kHz mono, alineados con el inicio).
+    #[serde(default)]
+    pub audio: Vec<AudioTrack>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AudioTrack {
+    /// "me" (micrófono) u "others" (audio del sistema).
+    pub speaker: String,
+    /// Ruta relativa a la carpeta de la sesión.
+    pub file: String,
+    pub duration_ms: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

@@ -32,6 +32,9 @@ pub struct Settings {
     pub mic_device: Option<String>,
     /// Conservar el audio de la sesión tras transcribirlo (para re-transcribir).
     pub keep_session_audio: bool,
+    /// Sesiones: grabar el micrófono ("Tú") y el audio del sistema ("Otros").
+    pub session_mic: bool,
+    pub session_system_audio: bool,
 }
 
 impl Default for Settings {
@@ -61,6 +64,8 @@ impl Settings {
             rec_mic: false,
             mic_device: None,
             keep_session_audio: true,
+            session_mic: true,
+            session_system_audio: true,
         }
     }
 

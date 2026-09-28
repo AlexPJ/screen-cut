@@ -10,8 +10,9 @@ use crate::app::activity::Activity;
 use crate::app::helpers::{hide_main, local_timestamp, open_floating_window, show_main};
 use crate::app::state::AppState;
 use crate::app::target::CaptureTarget;
+use crate::infra::audio::{Source, TrackRecorder};
 use crate::infra::{capture, clipboard, png_io};
-use model::{Session, SessionImage, SessionSummary, Status, FORMAT_VERSION};
+use model::{AudioTrack, Session, SessionImage, SessionSummary, Status, FORMAT_VERSION};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
@@ -24,6 +25,8 @@ pub struct ActiveSession {
     pub started: Instant,
     /// Números de captura ya asignados (las capturas pueden solaparse).
     next_n: u32,
+    /// Pistas de audio grabándose: (hablante, archivo relativo, grabador).
+    recorders: Vec<(&'static str, String, TrackRecorder)>,
 }
 
 #[derive(Serialize, Clone)]
@@ -83,7 +86,11 @@ fn notify_state(app: &AppHandle) {
 /// principal y muestra el control flotante.
 pub fn start(app: &AppHandle, target: CaptureTarget) -> Result<(), String> {
     let state: State<AppState> = app.state();
-    let max_image_secs = state.settings.lock().unwrap().max_image_secs;
+    let (max_image_secs, want_mic, want_system) = {
+        let settings = state.settings.lock().unwrap();
+        (settings.max_image_secs, settings.session_mic, settings.session_system_audio)
+    };
+    let mut warnings = Vec::new();
     {
         let mut activity = state.activity.lock().unwrap();
         if !matches!(*activity, Activity::Idle) {
@@ -94,6 +101,7 @@ pub fn start(app: &AppHandle, target: CaptureTarget) -> Result<(), String> {
         for sub in ["images", "thumbs"] {
             std::fs::create_dir_all(dir.join(sub)).map_err(|e| format!("No se pudo crear la carpeta de la sesión: {e}"))?;
         }
+        let started = Instant::now();
         let session = Session {
             version: FORMAT_VERSION,
             id,
@@ -104,14 +112,52 @@ pub fn start(app: &AppHandle, target: CaptureTarget) -> Result<(), String> {
             max_image_secs,
             images: Vec::new(),
             segments: Vec::new(),
+            audio: Vec::new(),
         };
         store::write(&dir, &session)?;
-        *activity = Activity::Session(Box::new(ActiveSession { dir, session, started: Instant::now(), next_n: 1 }));
+        let recorders = start_audio(&dir, started, want_mic, want_system, &mut warnings);
+        *activity = Activity::Session(Box::new(ActiveSession { dir, session, started, next_n: 1, recorders }));
     }
     hide_main(app);
     open_control(app, &target)?;
     notify_state(app);
+    if !warnings.is_empty() {
+        // El control flotante tarda un momento en escuchar eventos.
+        let app = app.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(800));
+            let _ = app.emit("session-error", warnings.join(" · "));
+        });
+    }
     Ok(())
+}
+
+/// Arranca la grabación del micrófono y del audio del sistema. Si una fuente
+/// falla (sin permiso, sin dispositivo, macOS anterior a 14.6 para el audio
+/// del sistema), la sesión sigue sin ella y se avisa.
+fn start_audio(
+    dir: &std::path::Path,
+    started: Instant,
+    mic: bool,
+    system: bool,
+    warnings: &mut Vec<String>,
+) -> Vec<(&'static str, String, TrackRecorder)> {
+    let mut recorders = Vec::new();
+    if (mic || system) && std::fs::create_dir_all(dir.join("audio")).is_err() {
+        warnings.push("No se pudo crear la carpeta del audio".into());
+        return recorders;
+    }
+    let sources = [(mic, "me", "audio/mic.wav", Source::Microphone), (system, "others", "audio/system.wav", Source::System)];
+    for (wanted, speaker, file, source) in sources {
+        if !wanted {
+            continue;
+        }
+        match TrackRecorder::start(source, dir.join(file), started) {
+            Ok(rec) => recorders.push((speaker, file.to_string(), rec)),
+            Err(e) => warnings.push(e),
+        }
+    }
+    recorders
 }
 
 /// Control flotante arriba en el centro de la pantalla del objetivo.
@@ -194,9 +240,17 @@ pub fn end(app: &AppHandle) -> Result<(), String> {
             Activity::Idle => return Err("No hay ninguna sesión en curso".into()),
         }
     };
-    let ActiveSession { dir, mut session, started, .. } = *active;
+    let ActiveSession { dir, mut session, started, recorders, .. } = *active;
     session.duration_ms = started.elapsed().as_millis() as u64;
     session.status = Status::Complete;
+    for (speaker, file, recorder) in recorders {
+        match recorder.stop() {
+            Ok(duration_ms) => session.audio.push(AudioTrack { speaker: speaker.into(), file, duration_ms }),
+            Err(e) => {
+                let _ = app.emit("capture-error", e);
+            }
+        }
+    }
     store::write(&dir, &session)?;
     let export = export::write_index(&dir, &session);
 

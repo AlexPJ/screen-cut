@@ -63,6 +63,7 @@ mod tests {
                 lang: None,
                 text: "</script><script>alert(1)</script>".into(),
             }],
+            audio: Vec::new(),
         }
     }
 

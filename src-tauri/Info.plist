@@ -4,5 +4,7 @@
 <dict>
   <key>NSMicrophoneUsageDescription</key>
   <string>ScreenCut usa el micrófono para grabar tus vídeos y transcribir tus sesiones. El audio se procesa solo en este equipo.</string>
+  <key>NSAudioCaptureUsageDescription</key>
+  <string>ScreenCut graba el audio del sistema (por ejemplo, el de una videollamada) para transcribir tus sesiones. El audio se procesa solo en este equipo.</string>
 </dict>
 </plist>
