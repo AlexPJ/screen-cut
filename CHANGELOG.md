@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 — 2026-09-28
+## 0.3.0 — 2026-09-29
 
 ### New
 - **Screen recording** of a screen, a region or a window to MP4 (H.264 + AAC), with system audio and the microphone mixed into one track.
@@ -25,3 +25,9 @@
 - On Windows, monitors larger than 4K are recorded at their native size.
 - Linux recording is untested on real desktops beyond the X11 smoke test in CI. On Wayland, the global shortcut does not work, so use the **Capturar** button or the tray menu during a session.
 - The app is not signed with a Developer ID, so macOS asks for Screen Recording and Microphone permission again after each update.
+
+## 0.2.0 — 2026-09-28
+
+### New
+- macOS (universal: Apple Silicon and Intel) and Linux (`.deb`, `.rpm`, `.AppImage`) builds.
+- On macOS the region capture shortcut is `⇧⌘X`.
