@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 — 2026-09-29
+
+### Changed
+- Videos record the microphone by default, together with the computer's audio. Before, only the computer's audio was on, so a video recorded while nothing was playing had a silent track. If you already saved any setting in 0.3.0, the old value is kept: turn on **Micrófono** in the target picker once.
+
 ## 0.3.0 — 2026-09-29
 
 ### New

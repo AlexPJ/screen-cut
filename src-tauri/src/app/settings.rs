@@ -62,7 +62,7 @@ impl Settings {
             transcribe_live: true,
             max_image_secs: None,
             rec_system_audio: true,
-            rec_mic: false,
+            rec_mic: true,
             mic_device: None,
             keep_session_audio: true,
             session_mic: true,
