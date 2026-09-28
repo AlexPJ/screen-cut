@@ -88,6 +88,11 @@
   // ---- Acerca de / versión ----
   async function refreshAbout() {
     try { $("about-version").textContent = "v" + (await T.app.getVersion()); } catch {}
+    try {
+      const stt = await invoke("get_transcription_info");
+      $("about-stt").textContent =
+        `Transcripción local: ${stt.engine} ${stt.version} · ${stt.languages.length} idiomas`;
+    } catch {}
   }
 
   // ---- Actualizaciones ----

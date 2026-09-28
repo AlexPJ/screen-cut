@@ -32,6 +32,16 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
 
+    # whisper.cpp: build without -march=native so the binary also runs on CPUs
+    # older than the runner's (any x86-64 with AVX2, i.e. PCs from 2013 on).
+    # The AVX options are ignored on ARM.
+    env:
+      GGML_NATIVE: "OFF"
+      GGML_AVX: "ON"
+      GGML_AVX2: "ON"
+      GGML_FMA: "ON"
+      GGML_F16C: "ON"
+
     steps:
       - uses: actions/checkout@v4
 
