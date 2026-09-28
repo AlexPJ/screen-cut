@@ -1,6 +1,6 @@
 // Selector de objetivo: una ventana o un monitor (o, para una sesión, una
 // región). Qué se hace con lo elegido lo decide el backend según el propósito
-// con el que se abrió: "capture" o "session".
+// con el que se abrió: "capture", "session" o "record".
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 const appWindow = window.__TAURI__.window.getCurrentWindow();
@@ -135,7 +135,22 @@ invoke("get_picker_purpose").then((p) => {
     return invoke("choose_region_target");
   });
   if (purpose === "session") setupSession().catch(() => {});
+  if (purpose === "record") setupRecording().catch(() => {});
 });
+
+// Qué audio lleva el vídeo. Se guarda al cambiarlo, así que la próxima vez
+// sale igual.
+async function setupRecording() {
+  const s = await invoke("get_session_settings");
+  const system = document.getElementById("rec-system");
+  const mic = document.getElementById("rec-mic");
+  system.checked = s.rec_system_audio;
+  mic.checked = s.rec_mic;
+  const save = (patch) => invoke("update_session_settings", { patch }).catch(showError);
+  system.onchange = () => save({ rec_system_audio: system.checked });
+  mic.onchange = () => save({ rec_mic: mic.checked });
+  document.getElementById("record-opts").hidden = false;
+}
 
 const mb = (bytes) => Math.round(bytes / 1e6) + " MB";
 
