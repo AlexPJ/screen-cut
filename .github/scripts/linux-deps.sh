@@ -7,6 +7,11 @@
 #   whisper.cpp: cmake, clang (bindgen)
 set -euo pipefail
 sudo apt-get update
+# The runner image ships libunwind-14-dev, which conflicts with the
+# libunwind-dev that libgstreamer1.0-dev depends on.
+if dpkg -s libunwind-14-dev >/dev/null 2>&1; then
+  sudo apt-get remove -y libunwind-14-dev
+fi
 sudo apt-get install -y \
   libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
   libxcb1-dev libxrandr-dev libdbus-1-dev \
