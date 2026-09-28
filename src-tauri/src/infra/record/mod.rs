@@ -1,0 +1,105 @@
+//! Grabación de vídeo (MP4: H.264 + AAC) con las APIs nativas de cada sistema,
+//! sin ffmpeg. macOS: ScreenCaptureKit + AVAssetWriter.
+
+use std::path::PathBuf;
+
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(target_os = "macos")]
+pub use macos::Recording;
+
+/// Qué grabar.
+#[derive(Clone, Debug)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub enum Source {
+    /// Un monitor entero o un rectángulo suyo. `rect` va en puntos, relativo al
+    /// monitor; `None` = el monitor entero.
+    Display { id: u32, rect: Option<Rect>, scale: f64 },
+    /// Una ventana (CGWindowID en macOS).
+    Window { id: u64 },
+}
+
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub struct Rect {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+#[derive(Clone, Debug)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub struct Options {
+    pub source: Source,
+    pub path: PathBuf,
+    pub system_audio: bool,
+    pub microphone: bool,
+}
+
+/// Tamaño de salida en píxeles: pares (H.264 trabaja con bloques de 2×2) y
+/// sin pasar de 4K, el máximo que admiten los codificadores por hardware.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub fn output_size(width: f64, height: f64) -> (usize, usize) {
+    let fit = (3840.0 / width).min(2160.0 / height).min(1.0);
+    let even = |v: f64| ((v * fit).round() as usize & !1).max(2);
+    (even(width), even(height))
+}
+
+/// Bitrate de vídeo razonable para contenido de pantalla (texto nítido sin
+/// archivos enormes): unos 6 Mbit/s en 1080p.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub fn video_bitrate(width: usize, height: usize) -> usize {
+    (width * height * 3).clamp(1_500_000, 16_000_000)
+}
+
+#[cfg(not(target_os = "macos"))]
+pub struct Recording;
+
+#[cfg(not(target_os = "macos"))]
+impl Recording {
+    pub fn start(_opts: Options, _on_error: impl Fn(String) + Send + Sync + 'static) -> Result<(Self, Vec<String>), String> {
+        Err("La grabación de vídeo todavía no está disponible en este sistema".into())
+    }
+
+    pub fn stop(self) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn output_size_is_even_and_at_most_4k() {
+        assert_eq!(output_size(1001.0, 601.0), (1000, 600));
+        let (w, h) = output_size(5120.0, 2880.0);
+        assert!(w <= 3840 && h <= 2160 && w % 2 == 0 && h % 2 == 0);
+        assert_eq!(output_size(1.0, 1.0), (2, 2));
+    }
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod probe {
+    use super::*;
+
+    /// Graba 3 s de la pantalla principal: `SCREENCUT_OUT=… cargo test probe_record -- --ignored`.
+    #[test]
+    #[ignore]
+    fn probe_record() {
+        let screen = crate::infra::capture::list_screens().unwrap().remove(0).screen;
+        let region = std::env::var("SCREENCUT_REGION").is_ok();
+        let rect = region.then_some(Rect { x: 100.0, y: 100.0, width: 641.0, height: 401.0 });
+        let opts = Options {
+            source: Source::Display { id: screen.id, rect, scale: screen.scale },
+            path: std::env::var("SCREENCUT_OUT").unwrap().into(),
+            system_audio: true,
+            microphone: std::env::var("SCREENCUT_MIC").is_ok(),
+        };
+        let (rec, warnings) = Recording::start(opts, |e| eprintln!("on_error: {e}")).unwrap();
+        println!("avisos: {warnings:?}");
+        std::thread::sleep(std::time::Duration::from_secs(3));
+        rec.stop().unwrap();
+    }
+}

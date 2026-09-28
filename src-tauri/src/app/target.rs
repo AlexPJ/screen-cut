@@ -36,6 +36,27 @@ impl CaptureTarget {
         }
     }
 
+    /// Posición y tamaño de un control flotante (sesión, grabación) de `w`×`h`
+    /// puntos, arriba en el centro de la pantalla del objetivo.
+    pub fn control_rect(&self, app: &AppHandle, w: f64, h: f64) -> (i32, i32, i32, i32) {
+        let screen = match self {
+            CaptureTarget::Screen { screen } | CaptureTarget::Region { screen, .. } => Some(*screen),
+            CaptureTarget::Window { .. } => capture::list_screens().ok().and_then(|l| l.first().map(|s| s.screen)),
+        };
+        // Tamaño lógico; en Windows y Linux las coordenadas son píxeles físicos.
+        let scale = if cfg!(target_os = "macos") {
+            1.0
+        } else {
+            app.primary_monitor().ok().flatten().map(|m| m.scale_factor()).unwrap_or(1.0)
+        };
+        let (w, h) = ((w * scale) as i32, (h * scale) as i32);
+        let (x, y) = match screen {
+            Some(s) => (s.x + (s.width - w) / 2, s.y + (if cfg!(target_os = "macos") { 44 } else { 12 })),
+            None => (100, 100),
+        };
+        (x, y, w, h)
+    }
+
     /// Para capturar una pantalla hay que quitar antes las ventanas de ScreenCut;
     /// una ventana o región ajena se captura sin tocar nada.
     fn needs_clear_screen(&self) -> bool {
@@ -77,7 +98,8 @@ pub async fn source_thumbnail(target: CaptureTarget) -> Result<String, String> {
 }
 
 /// Abre el selector de pantalla/ventana. `purpose` dice qué hacer con lo que
-/// se elija: "capture" (capturarlo ahora) o "session" (fijarlo para una sesión).
+/// se elija: "capture" (capturarlo ahora), "session" (fijarlo para una sesión)
+/// o "record" (grabarlo en vídeo).
 pub fn open_picker(app: &AppHandle, purpose: &str) -> Result<(), String> {
     let state: State<AppState> = app.state();
     *state.picker_purpose.lock().unwrap() = purpose.to_string();
@@ -87,7 +109,11 @@ pub fn open_picker(app: &AppHandle, purpose: &str) -> Result<(), String> {
         let _ = w.set_focus();
         return Ok(());
     }
-    let title = if purpose == "session" { "Elige qué fijar para la sesión" } else { "Elige qué capturar" };
+    let title = match purpose {
+        "session" => "Elige qué fijar para la sesión",
+        "record" => "Elige qué grabar",
+        _ => "Elige qué capturar",
+    };
     WebviewWindowBuilder::new(app, "picker", WebviewUrl::App("picker.html".into()))
         .title(title)
         .inner_size(780.0, 560.0)
@@ -127,6 +153,7 @@ pub fn choose_target(app: AppHandle, target: CaptureTarget) -> Result<(), String
         close_picker(&app);
         let result = match purpose.as_str() {
             "session" => crate::app::session::start(&app, target),
+            "record" => crate::app::recording::start(&app, target),
             _ => capture_once(&app, &target),
         };
         if let Err(e) = result {

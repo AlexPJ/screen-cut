@@ -17,6 +17,7 @@
       <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></symbol>
       <symbol id="i-region" viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4"/><path d="M15 3h4a2 2 0 0 1 2 2v4"/><path d="M9 21H5a2 2 0 0 1-2-2v-4"/><path d="M15 21h4a2 2 0 0 0 2-2v-4"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></symbol>
       <symbol id="i-window" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><circle cx="6" cy="6.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="8.5" cy="6.5" r="0.6" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-record" viewBox="0 0 24 24"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 10.5l6-3.5v10l-6-3.5z"/></symbol>
       <symbol id="i-session" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></symbol>
       <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></symbol>
       <symbol id="i-display" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></symbol>
@@ -97,6 +98,9 @@
         <span class="divider"></span>
         <button id="btn-session" class="btn" title="Sesión: fija una región, ventana o pantalla y captúrala al instante con el atajo">
           <svg><use href="#i-session"/></svg><span>Sesión</span>
+        </button>
+        <button id="btn-record" class="btn" title="Grabar en vídeo una región, una ventana o una pantalla">
+          <svg><use href="#i-record"/></svg><span>Grabar</span>
         </button>
         <span class="divider"></span>
         <label class="timer-ctl" title="Retardo antes de capturar">
@@ -306,6 +310,19 @@
             </div>
           </section>
 
+          <section class="set-group" id="set-recording">
+            <h3>Grabación de vídeo</h3>
+            <label class="set-row">
+              <span class="set-label"><b>Grabar el audio del sistema</b><small>Lo que suena en el ordenador (la videollamada, un vídeo…).</small></span>
+              <input type="checkbox" id="opt-rec-system" class="switch" />
+            </label>
+            <label class="set-row">
+              <span class="set-label"><b>Grabar el micrófono</b><small id="rec-mic-desc">Va en una pista de audio aparte. En Mac requiere macOS 15 o posterior.</small></span>
+              <input type="checkbox" id="opt-rec-mic" class="switch" />
+            </label>
+            <p class="set-note" id="rec-note">Los vídeos (MP4) se guardan en la carpeta «Grabaciones», dentro de la de capturas.</p>
+          </section>
+
           <section class="set-group">
             <h3>Acerca de</h3>
             <div class="about">
@@ -326,6 +343,7 @@
     </div>
 
     <div id="toast" class="toast hidden"></div>
+    <div id="notice" class="toast notice hidden"><span id="notice-text"></span><button id="notice-action" class="btn btn-small"></button></div>
   </div>
   <script src="editor.js"></script>
   <script src="languages.js"></script>

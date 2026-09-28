@@ -126,6 +126,35 @@ $("btn-session").onclick = () => safe(() =>
 listen("session-state", (e) => setSessionState(e.payload.active));
 invoke("session_status").then((s) => setSessionState(s.active)).catch(() => {});
 
+// ---------- Grabación de vídeo ----------
+let recordingActive = false;
+function setRecordingState(s) {
+  recordingActive = s.active;
+  const btn = $("btn-record");
+  btn.hidden = !s.supported;
+  btn.classList.toggle("active", s.active);
+  btn.querySelector("span").textContent = s.active ? "Detener" : "Grabar";
+}
+$("btn-record").onclick = () => safe(() =>
+  recordingActive ? invoke("stop_recording") : invoke("open_target_picker", { purpose: "record" }));
+listen("recording-state", (e) => setRecordingState(e.payload));
+invoke("recording_status").then(setRecordingState).catch(() => {});
+
+let noticeTimer;
+function notice(text, action, onAction) {
+  $("notice-text").textContent = text;
+  $("notice-action").textContent = action;
+  $("notice-action").onclick = () => { $("notice").classList.add("hidden"); onAction(); };
+  $("notice").classList.remove("hidden");
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => $("notice").classList.add("hidden"), 8000);
+}
+listen("recording-saved", (e) => {
+  const { path, duration_ms } = e.payload;
+  notice(`Vídeo guardado (${fmtDuration(duration_ms)})`, "Mostrar en carpeta",
+    () => safe(() => invoke("reveal_recording", { path })));
+});
+
 const sessionsOverlay = $("sessions-overlay");
 function fmtDuration(ms) {
   const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60;

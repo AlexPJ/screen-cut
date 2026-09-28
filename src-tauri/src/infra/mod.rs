@@ -6,6 +6,7 @@ pub mod input;
 pub mod macos;
 pub mod ocr;
 pub mod png_io;
+pub mod record;
 pub mod scroll;
 pub mod stt;
 pub mod window;

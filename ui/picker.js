@@ -117,17 +117,24 @@ document.getElementById("btn-refresh").onclick = load;
 document.getElementById("btn-cancel").onclick = () => appWindow.close();
 addEventListener("keydown", (e) => { if (e.key === "Escape") appWindow.close(); });
 
+const HINTS = {
+  session: "Elige la ventana, la pantalla o la región que quieres fijar: durante la sesión, el atajo de captura la capturará al instante.",
+  record: "Elige la ventana, la pantalla o la región que quieres grabar. Las ventanas de ScreenCut no salen en el vídeo.",
+};
+
 invoke("get_picker_purpose").then((p) => {
   purpose = p;
-  if (purpose !== "session") return;
-  document.getElementById("hint").hidden = false;
+  if (!HINTS[purpose]) return;
+  const hint = document.getElementById("hint");
+  hint.textContent = HINTS[purpose];
+  hint.hidden = false;
   const region = document.getElementById("btn-region");
   region.hidden = false;
   region.onclick = () => choose(() => {
-    localStorage.setItem("overlay-mode", "target-session");
+    localStorage.setItem("overlay-mode", purpose === "session" ? "target-session" : "target-record");
     return invoke("choose_region_target");
   });
-  setupSession().catch(() => {});
+  if (purpose === "session") setupSession().catch(() => {});
 });
 
 const mb = (bytes) => Math.round(bytes / 1e6) + " MB";

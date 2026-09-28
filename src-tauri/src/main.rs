@@ -81,6 +81,9 @@ fn main() {
             app::session::transcribe_session,
             app::session::session_setup,
             app::session::set_session_language,
+            app::recording::recording_status,
+            app::recording::stop_recording,
+            app::recording::reveal_recording,
         ])
         .setup(|app| {
             // Atajo por defecto: Ctrl+Shift+X (siempre activo).
@@ -98,16 +101,31 @@ fn main() {
                 MenuItem::with_id(app, "capture", "Capturar región", true, None::<&str>)?;
             let session_i =
                 MenuItem::with_id(app, "session", "Iniciar sesión…", true, None::<&str>)?;
+            let record_i = MenuItem::with_id(
+                app,
+                "record",
+                "Grabar vídeo…",
+                app::recording::SUPPORTED,
+                None::<&str>,
+            )?;
             let show_i = MenuItem::with_id(app, "show", "Mostrar ventana", true, None::<&str>)?;
             let quit_i = MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?;
             let menu = Menu::with_items(
                 app,
-                &[&capture_i, &session_i, &show_i, &PredefinedMenuItem::separator(app)?, &quit_i],
+                &[
+                    &capture_i,
+                    &session_i,
+                    &record_i,
+                    &show_i,
+                    &PredefinedMenuItem::separator(app)?,
+                    &quit_i,
+                ],
             )?;
             {
                 let state: tauri::State<app::state::AppState> = app.state();
                 *state.tray_capture_item.lock().unwrap() = Some(capture_i.clone());
                 *state.tray_session_item.lock().unwrap() = Some(session_i.clone());
+                *state.tray_record_item.lock().unwrap() = Some(record_i.clone());
             }
 
             TrayIconBuilder::with_id("main-tray")
@@ -118,6 +136,7 @@ fn main() {
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "capture" => app::activity::on_hotkey(app),
                     "session" => app::session::toggle_from_tray(app),
+                    "record" => app::recording::toggle_from_tray(app),
                     "show" => show_main(app),
                     "quit" => app.exit(0),
                     _ => {}

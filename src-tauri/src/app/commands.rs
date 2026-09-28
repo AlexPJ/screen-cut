@@ -247,6 +247,10 @@ fn finish_region_selection_inner(
         let target = crate::app::target::CaptureTarget::Region { screen, x, y, width, height };
         return crate::app::session::start(app, target);
     }
+    if mode == "target-record" {
+        let target = crate::app::target::CaptureTarget::Region { screen, x, y, width, height };
+        return crate::app::recording::start(app, target);
+    }
 
     if mode == "region" {
         let img = {
@@ -436,9 +440,9 @@ pub fn set_screenshots_dir(app: AppHandle, state: State<AppState>, path: String)
     settings.save(&app)
 }
 
-// --- Sesiones y transcripción (Ajustes → Transcripción) ---
+// --- Sesiones, transcripción y grabación (Ajustes) ---
 
-/// Ajustes que la sección puede leer y cambiar (el modelo va aparte, con
+/// Ajustes que esas secciones pueden leer y cambiar (el modelo va aparte, con
 /// `set_whisper_model`).
 const SESSION_KEYS: &[&str] = &[
     "transcription_language",
@@ -449,6 +453,8 @@ const SESSION_KEYS: &[&str] = &[
     "session_system_audio",
     "keep_session_audio",
     "sessions_dir",
+    "rec_system_audio",
+    "rec_mic",
 ];
 
 fn session_settings_json(settings: &Settings) -> serde_json::Value {

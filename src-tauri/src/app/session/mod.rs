@@ -14,7 +14,7 @@ use crate::app::helpers::{hide_main, local_timestamp, open_floating_window, show
 use crate::app::state::AppState;
 use crate::app::target::CaptureTarget;
 use crate::infra::audio::{Source, TrackRecorder};
-use crate::infra::{capture, clipboard, png_io};
+use crate::infra::{clipboard, png_io};
 use model::{AudioTrack, Session, SessionImage, SessionSummary, Status, TranscriptInfo, TranscriptStatus, FORMAT_VERSION};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -79,13 +79,13 @@ pub fn status(app: &AppHandle) -> SessionStatus {
             images: s.session.images.len(),
             target: Some(s.session.target.label()),
         },
-        Activity::Idle => SessionStatus { active: false, id: None, started_at_ms: None, images: 0, target: None },
+        _ => SessionStatus { active: false, id: None, started_at_ms: None, images: 0, target: None },
     }
 }
 
 fn notify_state(app: &AppHandle) {
     let status = status(app);
-    crate::app::activity::update_tray(app, status.active);
+    crate::app::activity::update_tray(app);
     let _ = app.emit("session-state", status);
 }
 
@@ -101,8 +101,10 @@ pub fn start(app: &AppHandle, target: CaptureTarget) -> Result<(), String> {
     let mut warnings = Vec::new();
     {
         let mut activity = state.activity.lock().unwrap();
-        if !matches!(*activity, Activity::Idle) {
-            return Err("Ya hay una sesión en curso".into());
+        match &*activity {
+            Activity::Idle => {}
+            Activity::Session(_) => return Err("Ya hay una sesión en curso".into()),
+            Activity::Recording(_) => return Err("Hay una grabación de vídeo en curso; detenla antes".into()),
         }
         let id = local_timestamp();
         let dir = store::session_dir(&sessions_root(app), &id)?;
@@ -215,22 +217,8 @@ fn start_audio(
 
 /// Control flotante arriba en el centro de la pantalla del objetivo.
 fn open_control(app: &AppHandle, target: &CaptureTarget) -> Result<(), String> {
-    let screen = match target {
-        CaptureTarget::Screen { screen } | CaptureTarget::Region { screen, .. } => Some(*screen),
-        CaptureTarget::Window { .. } => capture::list_screens().ok().and_then(|l| l.first().map(|s| s.screen)),
-    };
-    // Tamaño lógico; en Windows y Linux las coordenadas son píxeles físicos.
-    let scale = if cfg!(target_os = "macos") {
-        1.0
-    } else {
-        app.primary_monitor().ok().flatten().map(|m| m.scale_factor()).unwrap_or(1.0)
-    };
-    let (w, h) = ((440.0 * scale) as i32, (56.0 * scale) as i32);
-    let (x, y) = match screen {
-        Some(s) => (s.x + (s.width - w) / 2, s.y + (if cfg!(target_os = "macos") { 44 } else { 12 })),
-        None => (100, 100),
-    };
-    open_floating_window(app, "sessionctl", "sessionctl.html", "Sesión de ScreenCut", (x, y, w, h))?;
+    let rect = target.control_rect(app, 440.0, 56.0);
+    open_floating_window(app, "sessionctl", "sessionctl.html", "Sesión de ScreenCut", rect)?;
     Ok(())
 }
 
@@ -290,7 +278,10 @@ pub fn end(app: &AppHandle) -> Result<(), String> {
         let mut activity = state.activity.lock().unwrap();
         match std::mem::replace(&mut *activity, Activity::Idle) {
             Activity::Session(s) => s,
-            Activity::Idle => return Err("No hay ninguna sesión en curso".into()),
+            other => {
+                *activity = other;
+                return Err("No hay ninguna sesión en curso".into());
+            }
         }
     };
     let ActiveSession { dir, mut session, started, recorders, live_transcript, .. } = *active;

@@ -76,6 +76,13 @@ objc2-app-kit = { version = "0.3", features = ["NSWindow", "NSGraphics", "NSResp
 objc2-core-foundation = "0.3"
 objc2-core-graphics = "0.3"
 objc2-vision = "0.3"
+# Grabación de vídeo: ScreenCaptureKit (pantalla, ventana y audio) + AVAssetWriter (MP4).
+objc2-screen-capture-kit = "0.3"
+objc2-av-foundation = { version = "0.3", features = ["objc2-core-media"] }
+objc2-core-media = "0.3"
+objc2-core-video = "0.3"
+block2 = "0.6"
+dispatch2 = "0.3"
 
 # xcap 0.5+ también enlaza PipeWire (para grabar vídeo, que no usamos), cuyas
 # bindings no compilan con las cabeceras de Ubuntu 22.04. La 0.4 captura igual.

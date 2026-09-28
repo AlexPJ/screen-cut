@@ -197,6 +197,8 @@
     $("opt-keep-audio").checked = s.keep_session_audio;
     $("opt-max").value = s.max_image_secs ? String(s.max_image_secs) : "";
     $("opt-sessions-folder").value = s.sessions_dir_effective || "";
+    $("opt-rec-system").checked = s.rec_system_audio;
+    $("opt-rec-mic").checked = s.rec_mic;
   }
   let languagesLoaded = false;
   async function refreshTranscription() {
@@ -227,6 +229,10 @@
     if (dir) saveSessionSettings({ sessions_dir: dir });
   };
   $("btn-sessions-reset").onclick = () => saveSessionSettings({ sessions_dir: null });
+  $("opt-rec-system").onchange = (e) => saveSessionSettings({ rec_system_audio: e.target.checked });
+  $("opt-rec-mic").onchange = (e) => saveSessionSettings({ rec_mic: e.target.checked });
+  // La grabación de vídeo llega a Windows y Linux más adelante.
+  invoke("recording_status").then((s) => { $("set-recording").hidden = !s.supported; }).catch(() => {});
 
   // ---- Acerca de / versión ----
   async function refreshAbout() {

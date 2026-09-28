@@ -27,4 +27,5 @@ pub struct AppState {
     /// Opciones de la bandeja cuyo texto cambia al empezar/terminar una sesión.
     pub tray_session_item: Mutex<Option<MenuItem<Wry>>>,
     pub tray_capture_item: Mutex<Option<MenuItem<Wry>>>,
+    pub tray_record_item: Mutex<Option<MenuItem<Wry>>>,
 }
