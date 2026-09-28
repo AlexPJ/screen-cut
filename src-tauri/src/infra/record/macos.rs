@@ -234,11 +234,11 @@ impl Recording {
         unsafe {
             let config = SCStreamConfiguration::new();
             let (filter, width, height) = match &opts.source {
-                Source::Display { id, rect, scale } => {
+                Source::Display { screen, rect } => {
                     let display = content
                         .displays()
                         .iter()
-                        .find(|d| d.displayID() == *id)
+                        .find(|d| d.displayID() == screen.id)
                         .ok_or("La pantalla ya no está conectada")?;
                     let own = std::process::id() as i32;
                     let ours: Vec<_> = content.applications().iter().filter(|a| a.processID() == own).collect();
@@ -249,12 +249,17 @@ impl Recording {
                         &ours,
                         &objc2_foundation::NSArray::new(),
                     );
+                    // ScreenCaptureKit recorta en puntos.
                     let (w, h) = match rect {
                         Some(r) => {
-                            config.setSourceRect(CGRect::new(CGPoint::new(r.x, r.y), CGSize::new(r.width, r.height)));
-                            (r.width * scale, r.height * scale)
+                            let s = screen.scale;
+                            config.setSourceRect(CGRect::new(
+                                CGPoint::new(r.x / s, r.y / s),
+                                CGSize::new(r.width / s, r.height / s),
+                            ));
+                            (r.width, r.height)
                         }
-                        None => (display.width() as f64 * scale, display.height() as f64 * scale),
+                        None => (display.width() as f64 * screen.scale, display.height() as f64 * screen.scale),
                     };
                     (filter, w, h)
                 }

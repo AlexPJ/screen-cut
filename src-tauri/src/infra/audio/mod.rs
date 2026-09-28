@@ -1,7 +1,9 @@
 //! Audio de las sesiones: micrófono ("Tú") y audio del sistema ("Otros"), cada
 //! uno en su propio WAV de 16 kHz mono alineado con el reloj de la sesión.
 
-mod device;
+pub(crate) mod device;
+#[cfg(any(windows, test))]
+pub mod mix;
 mod resample;
 mod track;
 pub(crate) mod wav;

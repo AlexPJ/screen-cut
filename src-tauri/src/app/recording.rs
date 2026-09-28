@@ -12,8 +12,8 @@ use std::path::PathBuf;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager, State};
 
-/// ¿Hay grabación de vídeo en este sistema? (Windows y Linux llegan después.)
-pub const SUPPORTED: bool = cfg!(target_os = "macos");
+/// ¿Hay grabación de vídeo en este sistema? (Linux llega después.)
+pub const SUPPORTED: bool = cfg!(any(target_os = "macos", windows));
 
 pub struct ActiveRecording {
     recording: Recording,
@@ -65,17 +65,10 @@ fn notify_state(app: &AppHandle) {
 /// Qué pedirle al grabador para cada tipo de objetivo.
 fn source(target: &CaptureTarget) -> record::Source {
     match target {
-        CaptureTarget::Screen { screen } => record::Source::Display { id: screen.id, rect: None, scale: screen.scale },
-        // La región va en píxeles de la captura; ScreenCaptureKit la quiere en puntos.
+        CaptureTarget::Screen { screen } => record::Source::Display { screen: *screen, rect: None },
         CaptureTarget::Region { screen, x, y, width, height } => record::Source::Display {
-            id: screen.id,
-            rect: Some(record::Rect {
-                x: *x as f64 / screen.scale,
-                y: *y as f64 / screen.scale,
-                width: *width as f64 / screen.scale,
-                height: *height as f64 / screen.scale,
-            }),
-            scale: screen.scale,
+            screen: *screen,
+            rect: Some(record::Rect { x: *x as f64, y: *y as f64, width: *width as f64, height: *height as f64 }),
         },
         CaptureTarget::Window { id, .. } => record::Source::Window { id: *id },
     }

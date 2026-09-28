@@ -233,6 +233,7 @@
   $("opt-rec-mic").onchange = (e) => saveSessionSettings({ rec_mic: e.target.checked });
   // La grabación de vídeo llega a Windows y Linux más adelante.
   invoke("recording_status").then((s) => { $("set-recording").hidden = !s.supported; }).catch(() => {});
+  if (platform !== "mac") $("rec-mic-desc").textContent = "Se mezcla con el audio del sistema en la misma pista.";
 
   // ---- Acerca de / versión ----
   async function refreshAbout() {
