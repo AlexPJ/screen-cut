@@ -19,6 +19,8 @@ serde_json = "1"
 png = "0.17"
 base64 = "0.22"
 dirs = "5"
+# Audio (micrófono y, en Windows/Linux, audio del sistema) para sesiones y vídeo.
+cpal = "0.18"
 
 [target.'cfg(windows)'.dependencies.windows]
 version = "0.58"
@@ -38,6 +40,18 @@ features = [
   "Security_Cryptography",
   "Win32_System_SystemInformation",
 ]
+
+# Transcripción local con whisper.cpp. En Apple Silicon usa la GPU (Metal); en
+# los Mac Intel no compensa.
+[target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dependencies]
+whisper-rs = { version = "0.16", features = ["metal"] }
+
+[target.'cfg(not(all(target_os = "macos", target_arch = "aarch64")))'.dependencies]
+whisper-rs = "0.16"
+
+# Grabación de vídeo en Windows: Windows.Graphics.Capture + Media Foundation.
+[target.'cfg(windows)'.dependencies]
+windows-capture = "2"
 
 # macOS y Linux: captura con xcap y portapapeles con arboard. En Windows se
 # siguen usando GDI y Win32 directamente (más rápido y sin dependencias extra).
@@ -60,6 +74,13 @@ objc2-vision = "0.3"
 xcap = "0.4"
 arboard = { version = "3", default-features = false, features = ["image-data", "wayland-data-control"] }
 x11rb = { version = "0.13", features = ["xtest"] }
+# La feature "pipewire" de cpal pide PipeWire ≥0.3.53 (Ubuntu 22.04 trae la
+# 0.3.48); PulseAudio también funciona sobre PipeWire vía pipewire-pulse.
+cpal = { version = "0.18", features = ["pulseaudio"] }
+# Grabación de vídeo: X11 (ximagesrc) y Wayland (portal + pipewiresrc).
+gstreamer = "0.25"
+gstreamer-app = "0.25"
+gstreamer-video = "0.25"
 
 [profile.release]
 opt-level = "z"

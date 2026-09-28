@@ -9,15 +9,8 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager, WindowEvent,
 };
+use app::helpers::show_main;
 use tauri_plugin_global_shortcut::ShortcutState;
-
-fn show_main(app: &tauri::AppHandle) {
-    if let Some(w) = app.get_webview_window("main") {
-        let _ = w.unminimize();
-        let _ = w.show();
-        let _ = w.set_focus();
-    }
-}
 
 fn main() {
     tauri::Builder::default()
@@ -59,6 +52,7 @@ fn main() {
             app::commands::get_screenshots_dir,
             app::commands::get_default_screenshots_dir,
             app::commands::set_screenshots_dir,
+            app::commands::get_transcription_info,
         ])
         .setup(|app| {
             // Atajo por defecto: Ctrl+Shift+X (siempre activo).
