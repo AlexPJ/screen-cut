@@ -55,6 +55,14 @@ fn main() {
             app::commands::get_default_screenshots_dir,
             app::commands::set_screenshots_dir,
             app::commands::get_transcription_info,
+            app::commands::get_session_settings,
+            app::commands::update_session_settings,
+            app::models::list_models,
+            app::models::set_whisper_model,
+            app::models::download_model,
+            app::models::cancel_model_download,
+            app::models::import_model,
+            app::models::delete_model,
             app::target::list_capture_sources,
             app::target::source_thumbnail,
             app::target::open_target_picker,
@@ -70,6 +78,9 @@ fn main() {
             app::session::session_file,
             app::session::save_session_edits,
             app::session::reveal_session,
+            app::session::transcribe_session,
+            app::session::session_setup,
+            app::session::set_session_language,
         ])
         .setup(|app| {
             // Atajo por defecto: Ctrl+Shift+X (siempre activo).
@@ -136,11 +147,15 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .expect("error al iniciar ScreenCut")
-        .run(|_app, _event| {
+        .run(|_app, event| {
             // macOS: clic en el icono del Dock con la ventana oculta en la bandeja.
             #[cfg(target_os = "macos")]
-            if let tauri::RunEvent::Reopen { has_visible_windows: false, .. } = _event {
+            if let tauri::RunEvent::Reopen { has_visible_windows: false, .. } = event {
                 show_main(_app);
+            }
+            if let tauri::RunEvent::Exit = event {
+                // El backend de Metal de whisper.cpp aborta al salir con el modelo cargado.
+                infra::stt::try_unload();
             }
         });
 }

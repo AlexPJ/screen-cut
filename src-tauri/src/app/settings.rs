@@ -17,7 +17,8 @@ pub struct Settings {
     pub sessions_dir: Option<PathBuf>,
     /// Idioma de la transcripción: "auto" o un código ISO 639-1 ("es", "en"…).
     pub transcription_language: String,
-    /// Si es `true`, no se pregunta el idioma al empezar cada sesión.
+    /// Si es `true`, el idioma de arriba se propone al empezar cada sesión (si
+    /// no, se propone "auto").
     pub remember_language: bool,
     /// Modelo de Whisper (id del catálogo de modelos).
     pub whisper_model: String,

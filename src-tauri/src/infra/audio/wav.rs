@@ -80,6 +80,30 @@ impl WavWriter {
     }
 }
 
+/// Lee hasta `max` muestras a partir de la muestra `from` de un WAV escrito por
+/// `WavWriter`, aunque se siga grabando: se fía del tamaño del archivo y no de
+/// la cabecera, que va unos segundos por detrás.
+pub fn read_samples(path: &Path, from: u64, max: usize) -> io::Result<Vec<f32>> {
+    use std::io::Read;
+    let mut file = File::open(path)?;
+    let available = file.metadata()?.len().saturating_sub(HEADER) / 2;
+    let count = available.saturating_sub(from).min(max as u64) as usize;
+    file.seek(SeekFrom::Start(HEADER + from * 2))?;
+    let mut bytes = vec![0u8; count * 2];
+    file.read_exact(&mut bytes)?;
+    Ok(bytes
+        .chunks_exact(2)
+        .map(|b| i16::from_le_bytes([b[0], b[1]]) as f32 / i16::MAX as f32)
+        .collect())
+}
+
+/// Muestras que hay ya en disco.
+pub fn available_samples(path: &Path) -> io::Result<u64> {
+    Ok(std::fs::metadata(path)?.len().saturating_sub(HEADER) / 2)
+}
+
+const HEADER: u64 = 44;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,5 +121,18 @@ mod tests {
         assert_eq!(&bytes[0..4], b"RIFF");
         assert_eq!(u32::from_le_bytes(bytes[40..44].try_into().unwrap()), 2_003 * 2);
         assert_eq!(i16::from_le_bytes([bytes[46], bytes[47]]), i16::MAX / 2);
+    }
+
+    #[test]
+    fn reads_back_a_range() {
+        let path = std::env::temp_dir().join(format!("screencut-wav-read-{}.wav", std::process::id()));
+        let mut w = WavWriter::create(&path, 16_000).unwrap();
+        w.write(&[0.0, 0.5, -0.5, 0.25]).unwrap();
+        w.finish().unwrap();
+        assert_eq!(available_samples(&path).unwrap(), 4);
+        let got = read_samples(&path, 1, 10).unwrap();
+        std::fs::remove_file(&path).unwrap();
+        assert_eq!(got.len(), 3);
+        assert!((got[0] - 0.5).abs() < 1e-3 && (got[2] - 0.25).abs() < 1e-3);
     }
 }

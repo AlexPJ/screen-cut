@@ -7,8 +7,13 @@
 //!                    /index.html
 //! ```
 
-use super::model::{Session, SessionSummary, Status};
+use super::model::{Session, SessionSummary, Status, TranscriptStatus};
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+
+/// Serializa las escrituras de `session.json`: la sesión, el transcriptor y el
+/// visor pueden querer guardar a la vez.
+static WRITE: Mutex<()> = Mutex::new(());
 
 pub const SESSION_FILE: &str = "session.json";
 
@@ -30,7 +35,17 @@ pub fn read(dir: &Path) -> Result<Session, String> {
 /// Escribe `session.json` de forma atómica (archivo temporal + renombrar), para
 /// que un cierre inesperado nunca lo deje a medias.
 pub fn write(dir: &Path, session: &Session) -> Result<(), String> {
+    let _guard = WRITE.lock().unwrap_or_else(|e| e.into_inner());
     write_atomic(&dir.join(SESSION_FILE), &serde_json::to_vec_pretty(session).map_err(|e| e.to_string())?)
+}
+
+/// Lee, modifica y guarda `session.json` sin que otra escritura se cuele en medio.
+pub fn update<T>(dir: &Path, change: impl FnOnce(&mut Session) -> T) -> Result<(Session, T), String> {
+    let _guard = WRITE.lock().unwrap_or_else(|e| e.into_inner());
+    let mut session = read(dir)?;
+    let out = change(&mut session);
+    write_atomic(&dir.join(SESSION_FILE), &serde_json::to_vec_pretty(&session).map_err(|e| e.to_string())?)?;
+    Ok((session, out))
 }
 
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
@@ -48,6 +63,7 @@ pub fn list(root: &Path) -> Vec<SessionSummary> {
         .map(|s| SessionSummary {
             target: s.target.label(),
             images: s.images.len(),
+            transcript: s.transcript.as_ref().map(|t| t.status),
             id: s.id,
             started_at_ms: s.started_at_ms,
             duration_ms: s.duration_ms,
@@ -58,16 +74,23 @@ pub fn list(root: &Path) -> Vec<SessionSummary> {
     list
 }
 
-/// Al arrancar no hay ninguna sesión en curso: las que siguen marcadas como
-/// "recording" se quedaron a medias al cerrarse la app.
+/// Al arrancar no hay ninguna sesión en curso ni transcribiéndose: las que
+/// siguen marcadas así se quedaron a medias al cerrarse la app.
 pub fn mark_interrupted(root: &Path) {
     let Ok(entries) = std::fs::read_dir(root) else { return };
     for dir in entries.filter_map(|e| Some(e.ok()?.path())) {
-        if let Ok(mut s) = read(&dir) {
-            if s.status == Status::Recording {
-                s.status = Status::Interrupted;
-                let _ = write(&dir, &s);
-            }
+        let Ok(s) = read(&dir) else { continue };
+        let transcribing = s.transcript.as_ref().is_some_and(|t| t.status == TranscriptStatus::Running);
+        if s.status == Status::Recording || transcribing {
+            let _ = update(&dir, |s| {
+                if s.status == Status::Recording {
+                    s.status = Status::Interrupted;
+                }
+                if let Some(t) = s.transcript.as_mut().filter(|t| t.status == TranscriptStatus::Running) {
+                    t.status = TranscriptStatus::Failed;
+                    t.error = Some("La app se cerró antes de terminar la transcripción".into());
+                }
+            });
         }
     }
 }

@@ -146,6 +146,8 @@ async function openSessions() {
     const parts = [fmtDuration(s.duration_ms), s.images + (s.images === 1 ? " captura" : " capturas"), s.target];
     if (s.status === "recording") parts.push("en curso");
     if (s.status === "interrupted") parts.push("interrumpida");
+    if (s.transcript === "running") parts.push("transcribiendo…");
+    if (s.transcript === "no_model" || s.transcript === "failed") parts.push("sin transcribir");
     item.querySelector("small").textContent = parts.join(" · ");
     item.onclick = () => {
       sessionsOverlay.classList.add("hidden");

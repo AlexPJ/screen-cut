@@ -261,6 +261,52 @@
           </section>
 
           <section class="set-group">
+            <h3>Sesiones y transcripción</h3>
+            <p class="set-note">La transcripción se hace en este equipo con Whisper: el audio nunca sale del ordenador. Solo se descarga el modelo, una vez.</p>
+            <div id="models" class="models"></div>
+            <div class="about-actions">
+              <button id="btn-model-import" class="btn btn-small" title="Para redes que bloquean la descarga: importa un modelo descargado a mano desde Hugging Face">Importar modelo…</button>
+              <span id="models-status" class="update-status"></span>
+            </div>
+            <label class="set-row">
+              <span class="set-label"><b>Idioma por defecto</b><small>Se propone al empezar cada sesión. «Autodetectar» reconoce el idioma cada medio minuto.</small></span>
+              <select id="opt-lang" class="set-select"></select>
+            </label>
+            <label class="set-row">
+              <span class="set-label"><b>Transcribir durante la sesión</b><small>Si el equipo va justo durante las videollamadas, desactívalo y se transcribirá al terminar.</small></span>
+              <input type="checkbox" id="opt-live" class="switch" />
+            </label>
+            <label class="set-row">
+              <span class="set-label"><b>Grabar el micrófono («Tú»)</b></span>
+              <input type="checkbox" id="opt-mic" class="switch" />
+            </label>
+            <label class="set-row">
+              <span class="set-label"><b>Grabar el audio del sistema («Otros»)</b><small>Lo que suena por los altavoces: la otra parte de la videollamada. Con auriculares no hay eco en el micrófono.</small></span>
+              <input type="checkbox" id="opt-system" class="switch" />
+            </label>
+            <label class="set-row">
+              <span class="set-label"><b>Conservar el audio</b><small>Permite volver a transcribir. Si lo desactivas, se borra en cuanto termina la transcripción.</small></span>
+              <input type="checkbox" id="opt-keep-audio" class="switch" />
+            </label>
+            <label class="set-row">
+              <span class="set-label"><b>Cada imagen dura</b><small>En el visor, hasta cuándo vale una captura (se puede cambiar en cada sesión).</small></span>
+              <select id="opt-max" class="set-select">
+                <option value="">Hasta la siguiente</option>
+                <option value="60">1 min como máximo</option>
+                <option value="120">2 min como máximo</option>
+                <option value="300">5 min como máximo</option>
+                <option value="600">10 min como máximo</option>
+                <option value="1800">30 min como máximo</option>
+              </select>
+            </label>
+            <div class="folder-row">
+              <input type="text" id="opt-sessions-folder" class="folder-input" readonly title="Carpeta de las sesiones" />
+              <button id="btn-sessions-browse" class="btn btn-small" title="Elegir carpeta de las sesiones"><svg><use href="#i-folder"/></svg><span>Elegir…</span></button>
+              <button id="btn-sessions-reset" class="btn btn-small btn-icon" title="Volver a la carpeta Sesiones dentro de la de capturas"><svg><use href="#i-refresh"/></svg></button>
+            </div>
+          </section>
+
+          <section class="set-group">
             <h3>Acerca de</h3>
             <div class="about">
               <span class="about-logo"><svg><use href="#i-scissors"/></svg></span>
@@ -282,6 +328,7 @@
     <div id="toast" class="toast hidden"></div>
   </div>
   <script src="editor.js"></script>
+  <script src="languages.js"></script>
   <script src="settings.js"></script>
   <script src="main.js"></script>
 </body>

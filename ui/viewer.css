@@ -106,7 +106,12 @@ input.invalid { border-color: #e5484d; }
   width: var(--side-w); min-width: 240px; max-width: 70vw; flex: none;
   display: flex; flex-direction: column; background: var(--panel);
 }
-.v-side h2 { font-size: 13px; font-weight: 600; padding: 14px 16px 8px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.v-side-head { display: flex; align-items: baseline; gap: 10px; padding: 14px 16px 8px; }
+.v-side h2 { font-size: 13px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.v-tstatus { flex: 1; min-width: 0; font-size: 12px; color: var(--text-dim); text-align: right; }
+.v-tstatus.err { color: #e5484d; }
+.v-tactions { display: flex; gap: 8px; padding: 0 16px 10px; }
+.v-tactions select { flex: 1; min-width: 0; }
 .v-transcript { flex: 1; overflow-y: auto; padding: 0 8px 16px; }
 .v-line {
   display: block; width: 100%; text-align: left; font: inherit; color: var(--text);
